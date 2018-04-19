@@ -1,0 +1,23 @@
+#address #time #type{
+    margin-left: 5px;
+    width: 90%;
+    display:inline-block;
+}
+
+.btn-success{
+    margin-top: 10px;
+}
+
+.custom{
+    margin-top: 20px;
+}
+
+.right{
+    float: right;
+    margin-right: 5px;
+    margin-bottom: 10px;
+}
+
+#addPanel {
+    margin-bottom: 20px;
+}

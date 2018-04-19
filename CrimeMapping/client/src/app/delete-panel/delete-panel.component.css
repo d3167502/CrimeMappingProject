@@ -1,0 +1,14 @@
+.custom{
+    width: 45%;
+    margin-left: 10px;
+}
+
+.right{
+    float: right;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+#deletePanel {
+    margin-bottom: 10px;
+}

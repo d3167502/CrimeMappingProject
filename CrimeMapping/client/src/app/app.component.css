@@ -1,0 +1,12 @@
+#map {
+    bottom:0px;
+    height: 100%;
+    left: 20%;
+    position: absolute;
+    width: 80%;
+  }
+
+#pano {
+    width: 1000; 
+    height: 1000;
+}

@@ -1,0 +1,60 @@
+<div class="wrapper2">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header2">
+            <br/>
+            <h4 align="center">Let's Build a Safer Community</h4>
+            <!-- <h6>
+                Welcome to Tian's App!
+            </h6> -->
+        </div>
+        <br/>
+        <div>
+          <div class="divider2"></div>
+          <input class="btn-warning btn-ct" id="show-listings" type="button" value="Show Listings" (click)="onClickShow()">
+          <div class="divider2"></div>
+          <input class="btn-warning btn-ct" id="hide-listings" type="button" value="Hide Listings" (click)="onClickHide()">
+          <div class="divider1"></div>
+        </div>
+        <div>
+          <input [(ngModel)]="zoomPlace" id="zoom-to-area-text" type="text" placeholder="Enter the area you want to check." class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
+          <input class="btn btn-default btn-ct" id="zoom-to-area" type="button" value="Zoom" (click)="onClickZoom()">
+        </div>
+        <app-add-panel></app-add-panel>
+        <br/>
+        <app-delete-panel></app-delete-panel>
+        <br/>
+        <hr>
+        <div id="draw">
+            <span id="draw">Draw a shape to search within it for the crime records</span><br/>
+            <input class="btn btn-default" id="toggle-drawing"  type="button" value="Drawing Tools">
+        </div>     
+        <br/>
+        <br/>
+        <hr>
+        <div>
+          <span class="text"> Within </span>
+          <select id="max-duration" class="custom-select">
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="60">1 hour</option>
+          </select>
+          <select id="mode" class="custom-select">
+            <option value="DRIVING">drive</option>
+            <option value="WALKING">walk</option>
+            <option value="BICYCLING">bike</option>
+            <option value="TRANSIT">transit ride</option>
+          </select>
+          <span class="text">of</span>
+          <br/>
+          <input id="search-within-time-text" type="text" placeholder="Ex: UC Berkeley, Berkeley, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
+          <input class="btn btn-default btn-ct" id="search-within-time" type="button" value="Go">
+        </div>
+        <hr>
+        <div>
+          <span class="text">Search for nearby places</span>
+          <input id="places-search" type="text" placeholder="Ex: Pizza delivery in UCB" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">          
+          <input class="btn btn-default btn-ct" id="go-places" type="button" value="Go">
+        </div>
+
+</div>

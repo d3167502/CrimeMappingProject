@@ -1,0 +1,31 @@
+<!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"> -->
+<div>
+  <button type="button" class="btn btn-success btn-block custom" (click)="onClick()">Add a report here</button>
+  <!-- <input class ='longButton' type="button" value="Add a case here" (click)="onClick()"> -->
+</div>
+<div *ngIf='isClick' id="addPanel">
+  <br/>
+  <span class="text">Click on the map or enter a location:</span>
+  <input id="address" type="text" placeholder="Ex: 5604 Melodia Cir, Dublin, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm"><br/>
+  <span class="text">Time:</span>
+  <input id="time" type="text" placeholder="Ex: 01/01/2018" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm"><br/>
+  <span class='text'> Type:</span>
+  <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+  <select id="type" class="custom-select">
+    <option value="Assault" class="glyphicon glyphicon-certificate"><span class="glyphicon glyphicon-certificate" aria-hidden="true"></span>Assault</option>
+    <option value="Drugs" class="glyphicon glyphicon-cloud">Drugs</option>
+    <option value="Robbery" data-icon="glyphicon-registration-mark">Robbery</option>
+    <option value="Weapon" data-icon="glyphicon-warning-sign">Weapon</option>
+    <option value="Theft" data-icon="glyphicon-eye-open">Theft</option>
+  </select>
+  <select title="Select your spell" class="selectpicker">
+      <option>Select...</option>
+      <option data-icon="glyphicon glyphicon-eye-open" data-subtext="petrification">Eye of Medusa</option>
+      <option data-icon="glyphicon glyphicon-fire" data-subtext="area damage">Rain of Fire</option>
+    </select>
+  <br/>
+  <!-- <input id="go-places" type="button" value="Submit"> -->
+  <button type="button" class="btn btn-success right">Submit</button>
+  <i class="glyphicon glyphicon-cloud"></i>
+  <br/>
+<div> 
