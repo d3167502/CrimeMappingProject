@@ -9,6 +9,7 @@ export class SidePanelComponent implements OnInit {
 
   @Input() markers;
   @Input() mapRef;
+  @Input() records;
 
   shown = true;
   zoomPlace: string;

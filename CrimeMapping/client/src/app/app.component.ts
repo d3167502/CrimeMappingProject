@@ -1,8 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, ViewChildren } from '@angular/core';
 import {} from '@types/googlemaps';
 import { AfterViewInit, ViewChild } from '@angular/core';
 import { SidePanelComponent } from './side-panel/side-panel.component';
+import { AddPanelComponent } from './add-panel/add-panel.component';
+import { DeletePanelComponent} from './delete-panel/delete-panel.component';
 import { DbAccessorService } from './db-accessor.service';
+import 'rxjs/add/operator/map';
+import {Http, Headers} from '@angular/http';
 declare const google: any;
 
 @Component({
@@ -14,13 +18,18 @@ declare const google: any;
 
 export class AppComponent {
   // @ViewChild('gmap') gmapElement: any;
-  @ViewChild(SidePanelComponent)
-  private sidePanel: SidePanelComponent;
+  @ViewChild(SidePanelComponent) sidePanel: SidePanelComponent;
+  @ViewChild(AddPanelComponent)
+  @ViewChild(DeletePanelComponent)
+  // private sidePanel: SidePanelComponent;
   map: google.maps.Map;
+  google: any;
+  geocoder: google.maps.Geocoder;
   title = 'Tian\'s app';
   // Create a new blank array for all the listing markers.
   markers: any[] = [];
   crimeRecords: any[];
+  mapStyle: any[];
   // largeInfowindow: any;
   // This global polygon variable is to ensure only ONE polygon is rendered.
   polygon = null;
@@ -29,7 +38,7 @@ export class AppComponent {
   // over the number of places that show.
   placeMarkers: any[] = [];
 
-  constructor(private dbAccessor: DbAccessorService) {
+  constructor(private dbAccessor: DbAccessorService, private http: Http) {
     // this.crimeRecords =  this.dbAccessor.getAll();
     this.dbAccessor.getAll()
         .subscribe(rtn => {
@@ -37,257 +46,36 @@ export class AppComponent {
             this.LoadMarkers();
             console.log(this.crimeRecords);
         });
+    // this.getMapStyle()
+    // .subscribe(
+    //   rtn => {this.mapStyle = rtn;
+    //     this.google = google;
+    //     this.LoadMap();
+    //    }
+    // );
   }
 
   // tslint:disable-next-line:use-life-cycle-interface
   ngOnInit() {
-    const styles = [
-      {
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#ebe3cd'
-          }
-        ]
-      },
-      {
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#523735'
-          }
-        ]
-      },
-      {
-        'elementType': 'labels.text.stroke',
-        'stylers': [
-          {
-            'color': '#f5f1e6'
-          }
-        ]
-      },
-      {
-        'featureType': 'administrative',
-        'elementType': 'geometry.stroke',
-        'stylers': [
-          {
-            'color': '#c9b2a6'
-          }
-        ]
-      },
-      {
-        'featureType': 'administrative.land_parcel',
-        'elementType': 'geometry.stroke',
-        'stylers': [
-          {
-            'color': '#dcd2be'
-          }
-        ]
-      },
-      {
-        'featureType': 'administrative.land_parcel',
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#ae9e90'
-          }
-        ]
-      },
-      {
-        'featureType': 'landscape.natural',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#dfd2ae'
-          }
-        ]
-      },
-      {
-        'featureType': 'poi',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#dfd2ae'
-          }
-        ]
-      },
-      {
-        'featureType': 'poi',
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#93817c'
-          }
-        ]
-      },
-      {
-        'featureType': 'poi.park',
-        'elementType': 'geometry.fill',
-        'stylers': [
-          {
-            'color': '#a5b076'
-          }
-        ]
-      },
-      {
-        'featureType': 'poi.park',
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#447530'
-          }
-        ]
-      },
-      {
-        'featureType': 'road',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#f5f1e6'
-          }
-        ]
-      },
-      {
-        'featureType': 'road.arterial',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#fdfcf8'
-          }
-        ]
-      },
-      {
-        'featureType': 'road.highway',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#f8c967'
-          }
-        ]
-      },
-      {
-        'featureType': 'road.highway',
-        'elementType': 'geometry.stroke',
-        'stylers': [
-          {
-            'color': '#e9bc62'
-          }
-        ]
-      },
-      {
-        'featureType': 'road.highway.controlled_access',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#e98d58'
-          }
-        ]
-      },
-      {
-        'featureType': 'road.highway.controlled_access',
-        'elementType': 'geometry.stroke',
-        'stylers': [
-          {
-            'color': '#db8555'
-          }
-        ]
-      },
-      {
-        'featureType': 'road.local',
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#806b63'
-          }
-        ]
-      },
-      {
-        'featureType': 'transit.line',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#dfd2ae'
-          }
-        ]
-      },
-      {
-        'featureType': 'transit.line',
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#8f7d77'
-          }
-        ]
-      },
-      {
-        'featureType': 'transit.line',
-        'elementType': 'labels.text.stroke',
-        'stylers': [
-          {
-            'color': '#ebe3cd'
-          }
-        ]
-      },
-      {
-        'featureType': 'transit.station',
-        'elementType': 'geometry',
-        'stylers': [
-          {
-            'color': '#dfd2ae'
-          }
-        ]
-      },
-      {
-        'featureType': 'water',
-        'elementType': 'geometry.fill',
-        'stylers': [
-          {
-            'color': '#b9d3c2'
-          }
-        ]
-      },
-      {
-        'featureType': 'water',
-        'elementType': 'labels.text.fill',
-        'stylers': [
-          {
-            'color': '#92998d'
-          }
-        ]
-      }
-    ];
+    const styles = this.mapStyle;
     this.map = new google.maps.Map(document.getElementById('map'), {
       center: {lat: 37.51157, lng: -122.134},
       zoom: 11,
-      styles: styles,
+      styles: this.mapStyle,
       mapTypeControl: false
     });
+    // console.log(this.mapStyle);
+    // console.log(this.crimeRecords);
+
+    const geocoder = new google.maps.Geocoder();
+    // This autocomplete is for use in the geocoder entry box.
+    const zoomAutocomplete = new google.maps.places.Autocomplete(
+      document.getElementById('zoom-to-area-text'));
+    // Bias the boundaries within the map for the zoom to area text.
+    zoomAutocomplete.bindTo('bounds', this.map);
 
     console.log(this.crimeRecords);
-    // // This autocomplete is for use in the search within time entry box.
-    // const timeAutocomplete = new google.maps.places.Autocomplete(
-    //   document.getElementById('search-within-time-text'));
-    // // This autocomplete is for use in the geocoder entry box.
-    // const zoomAutocomplete = new google.maps.places.Autocomplete(
-    //   document.getElementById('zoom-to-area-text'));
-    // // Bias the boundaries within the map for the zoom to area text.
-    //   zoomAutocomplete.bindTo('bounds', this.map);
-    // // Create a searchbox in order to execute a places search
-    // const searchBox = new google.maps.places.SearchBox(
-    //   document.getElementById('places-search'));
-    // // Bias the searchbox to within the bounds of the map.
-    // searchBox.setBounds(this.map.getBounds());
-
-    // These are the real estate listings that will be shown to the user.
-    // Normally we'd have these in a database instead.
-    const locations = [
-      {title: 'Park Ave Penthouse', location: {lat: 40.7713024, lng: -73.9632393}},
-      {title: 'Chelsea Loft', location: {lat: 40.7444883, lng: -73.9949465}},
-      {title: 'Union Square Open Floor Plan', location: {lat: 40.7347062, lng: -73.9895759}},
-      {title: 'East Village Hip Studio', location: {lat: 40.7281777, lng: -73.984377}},
-      {title: 'TriBeCa Artsy Bachelor Pad', location: {lat: 40.7195264, lng: -74.0089934}},
-      {title: 'Chinatown Homey Space', location: {lat: 40.7180628, lng: -73.9961237}}
-    ];
+    console.log(this.sidePanel);
 
     const largeInfowindow = new google.maps.InfoWindow();
 
@@ -303,60 +91,48 @@ export class AppComponent {
       }
     });
 
-    // document.getElementById('show-listings').addEventListener('click', this.showListings);
+  }
 
-    // document.getElementById('hide-listings').addEventListener('click', hideMarkers);
+  LoadMap() {
+    const styles = this.mapStyle;
+    this.map = new google.maps.Map(document.getElementById('map'), {
+      center: {lat: 37.51157, lng: -122.134},
+      zoom: 11,
+      styles: this.mapStyle,
+      mapTypeControl: false
+    });
+    console.log(this.mapStyle);
+    console.log(this.crimeRecords);
+    const geocoder = new google.maps.Geocoder();
+    // This autocomplete is for use in the geocoder entry box.
+    const zoomAutocomplete = new google.maps.places.Autocomplete(
+      document.getElementById('zoom-to-area-text'));
+    // Bias the boundaries within the map for the zoom to area text.
+    zoomAutocomplete.bindTo('bounds', this.map);
 
-      // document.getElementById('toggle-drawing').addEventListener('click', function() {
-      //   toggleDrawing(drawingManager);
-      // });
+    console.log(this.crimeRecords);
+    console.log(this.sidePanel);
 
-      // document.getElementById('zoom-to-area').addEventListener('click', function() {
-      //   zoomToArea();
-      // });
+    const largeInfowindow = new google.maps.InfoWindow();
 
-      // document.getElementById('search-within-time').addEventListener('click', function() {
-      //   searchWithinTime();
-      // });
-
-      // // Listen for the event fired when the user selects a prediction from the
-      // // picklist and retrieve more details for that place.
-      // searchBox.addListener('places_changed', function() {
-      //   searchBoxPlaces(this);
-      // });
-
-      // // Listen for the event fired when the user selects a prediction and clicks
-      // // "go" more details for that place.
-      // document.getElementById('go-places').addEventListener('click', textSearchPlaces);
-
-      // // Add an event listener so that the polygon is captured,  call the
-      // // searchWithinPolygon function. This will show the markers in the polygon,
-      // // and hide any outside of it.
-      // drawingManager.addListener('overlaycomplete', function(event) {
-      //   // First, check if there is an existing polygon.
-      //   // If there is, get rid of it and remove the markers
-      //   if (polygon) {
-      //     polygon.setMap(null);
-      //     hideMarkers(markers);
-      //   }
-      //   // Switching the drawing mode to the HAND (i.e., no longer drawing).
-      //   drawingManager.setDrawingMode(null);
-      //   // Creating a new editable polygon from the overlay.
-      //   polygon = event.overlay;
-      //   polygon.setEditable(true);
-      //   // Searching within the polygon.
-      //   searchWithinPolygon(polygon);
-      //   // Make sure the search is re-done if the poly is changed.
-      //   polygon.getPath().addListener('set_at', searchWithinPolygon);
-      //   polygon.getPath().addListener('insert_at', searchWithinPolygon);
-      // });
+    // Initialize the drawing manager.
+    const drawingManager = new google.maps.drawing.DrawingManager({
+      drawingMode: google.maps.drawing.OverlayType.POLYGON,
+      drawingControl: true,
+      drawingControlOptions: {
+        position: google.maps.ControlPosition.TOP_LEFT,
+        drawingModes: [
+          google.maps.drawing.OverlayType.POLYGON
+        ]
+      }
+    });
 
   }
 
   // This function will loop through the markers array and display them all.
   showListings() {
     const bounds = new google.maps.LatLngBounds();
-    console.log('3' + this.markers);
+    console.log('this.markers.length:' + this.markers.length + this.markers);
     // Extend the boundaries of the map for each marker and display the marker
     for (let i = 0; i < this.markers.length; i++) {
       this.markers[i].setMap(this.map);
@@ -384,7 +160,10 @@ export class AppComponent {
     // Get the address or place that the user entered.
 
     // const address = document.getElementById('zoom-to-area-text').value;
+    console.log('zoomToArea');
+    console.log(this);
     const address = this.sidePanel.zoomPlace;
+    // console.log(address);
 
     // Make sure the address isn't blank.
     if (address === '') {
@@ -394,12 +173,12 @@ export class AppComponent {
       // on it and zoom in
       geocoder.geocode(
         { address: address,
-          componentRestrictions: {locality: 'New York'}
+          componentRestrictions: {locality: 'California'}
         }, (results, status) => {
           if (status === google.maps.GeocoderStatus.OK) {
             console.log(results);
             // const latlng = new google.maps.LatLng(39.51157, -132.134);
-            this.map.setZoom(15);
+            this.map.setZoom(13);
             this.map.setCenter(results[0].geometry.location);
           } else {
             window.alert('We could not find that location - try entering a more' +
@@ -511,5 +290,19 @@ export class AppComponent {
         // Open the infowindow on the correct marker.
         infowindow.open(this.map, marker);
       }
+    }
+
+    addSearch(tag: string) {
+      // This autocomplete is for use in the geocoder entry box.
+      const addAutocomplete = new google.maps.places.Autocomplete(
+        document.getElementById(tag));
+      // Bias the boundaries within the map for the zoom to area text.
+      addAutocomplete.bindTo('bounds', this.map);
+    }
+
+    getMapStyle() {
+      // get users from api
+      return this.http.get('../assets/img/mapStyle.json')
+          .map(res => res.json());
     }
 }

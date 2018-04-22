@@ -14,4 +14,11 @@ export class DbAccessorService {
       .map(res => res.json());
   }
 
+  addOne(newRecord) {
+    const headers = new Headers();
+    headers.append('Content-Type', 'application/json');
+    return this.http.post('http://localhost:3000/add', JSON.stringify(newRecord), {headers: headers})
+      .map(res => res.json());
+  }
+
 }

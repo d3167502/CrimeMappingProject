@@ -19,7 +19,7 @@
           <input [(ngModel)]="zoomPlace" id="zoom-to-area-text" type="text" placeholder="Enter the area you want to check." class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
           <input class="btn btn-default btn-ct" id="zoom-to-area" type="button" value="Zoom" (click)="onClickZoom()">
         </div>
-        <app-add-panel></app-add-panel>
+        <app-add-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-add-panel>
         <br/>
         <app-delete-panel></app-delete-panel>
         <br/>

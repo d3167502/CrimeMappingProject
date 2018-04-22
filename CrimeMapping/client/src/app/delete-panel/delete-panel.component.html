@@ -2,9 +2,9 @@
 <div>
     <button type="button" class="btn btn-danger btn-block" (click)="onClick()">Delete a report here</button>
 </div>
-<div *ngIf='isClick' id="deletePanel">
+<div [ngClass]="{'d-none':this.isClick === false}" id="deletePanel">
     <br/>
     <span class="text">Select an icon or enter a location:</span><br/>
-    <input id="address" type="text" placeholder="Ex: 5604 Melodia Cir, Dublin, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm"><br/>
+    <input id="delete-address" type="text" placeholder="Ex: 5604 Melodia Cir, Dublin, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm"><br/>
     <button type="button" class="btn btn-danger right">Delete</button>
 </div>

@@ -27,7 +27,7 @@ module.exports = "#address #time #type{\n    margin-left: 5px;\n    width: 90%;\
 /***/ "./src/app/add-panel/add-panel.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<!-- <link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css\"> -->\n<div>\n  <button type=\"button\" class=\"btn btn-success btn-block custom\" (click)=\"onClick()\">Add a report here</button>\n  <!-- <input class ='longButton' type=\"button\" value=\"Add a case here\" (click)=\"onClick()\"> -->\n</div>\n<div *ngIf='isClick' id=\"addPanel\">\n  <br/>\n  <span class=\"text\">Click on the map or enter a location:</span>\n  <input id=\"address\" type=\"text\" placeholder=\"Ex: 5604 Melodia Cir, Dublin, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\"><br/>\n  <span class=\"text\">Time:</span>\n  <input id=\"time\" type=\"text\" placeholder=\"Ex: 01/01/2018\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\"><br/>\n  <span class='text'> Type:</span>\n  <span class=\"glyphicon glyphicon-search\" aria-hidden=\"true\"></span>\n  <select id=\"type\" class=\"custom-select\">\n    <option value=\"Assault\" class=\"glyphicon glyphicon-certificate\"><span class=\"glyphicon glyphicon-certificate\" aria-hidden=\"true\"></span>Assault</option>\n    <option value=\"Drugs\" class=\"glyphicon glyphicon-cloud\">Drugs</option>\n    <option value=\"Robbery\" data-icon=\"glyphicon-registration-mark\">Robbery</option>\n    <option value=\"Weapon\" data-icon=\"glyphicon-warning-sign\">Weapon</option>\n    <option value=\"Theft\" data-icon=\"glyphicon-eye-open\">Theft</option>\n  </select>\n  <select title=\"Select your spell\" class=\"selectpicker\">\n      <option>Select...</option>\n      <option data-icon=\"glyphicon glyphicon-eye-open\" data-subtext=\"petrification\">Eye of Medusa</option>\n      <option data-icon=\"glyphicon glyphicon-fire\" data-subtext=\"area damage\">Rain of Fire</option>\n    </select>\n  <br/>\n  <!-- <input id=\"go-places\" type=\"button\" value=\"Submit\"> -->\n  <button type=\"button\" class=\"btn btn-success right\">Submit</button>\n  <i class=\"glyphicon glyphicon-cloud\"></i>\n  <br/>\n<div> "
+module.exports = "<!-- <link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css\"> -->\n<div>\n  <button type=\"button\" class=\"btn btn-success btn-block custom\" (click)=\"onClick()\">Add a report here</button>\n  <!-- <input class ='longButton' type=\"button\" value=\"Add a case here\" (click)=\"onClick()\"> -->\n</div>\n<div [ngClass]=\"{'d-none':this.isClick === false}\" id=\"addPanel\">\n  <form class='addForm' (submit)='addRecord(crimeTime.value, crimeType.value)'>\n    <br/>\n    <span class=\"text\">Click on the map or enter a location:</span>\n    <input [(ngModel)]=\"addAddress\" name=\"address\" id=\"add-address\" class=\"form-control\" type=\"text\" placeholder=\"Ex: 5604 Melodia Cir, Dublin, CA\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\"><br/>\n    <span class=\"text\">Time:</span>\n    <input #crimeTime id=\"time\" type=\"date\" placeholder=\"Ex: 01/01/2018\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\"><br/>\n    <span class='text'> Type:</span>\n    <span class=\"glyphicon glyphicon-search\" aria-hidden=\"true\"></span>\n    <select id=\"type\" class=\"custom-select\" #crimeType>\n      <option value=\"Assault\" class=\"glyphicon glyphicon-certificate\"><span class=\"glyphicon glyphicon-certificate\" aria-hidden=\"true\"></span>Assault</option>\n      <option value=\"Drugs\" class=\"glyphicon glyphicon-cloud\">Drugs</option>\n      <option value=\"Robbery\" data-icon=\"glyphicon-registration-mark\">Robbery</option>\n      <option value=\"Weapon\" data-icon=\"glyphicon-warning-sign\">Weapon</option>\n      <option value=\"Theft\" data-icon=\"glyphicon-eye-open\">Theft</option>\n    </select>\n    <br/>\n    <!-- <input id=\"go-places\" type=\"button\" value=\"Submit\"> -->\n    <button type=\"submit\" class=\"btn btn-success right\">Submit</button>\n    <br/>\n  </form>\n<div> \n"
 
 /***/ }),
 
@@ -37,6 +37,7 @@ module.exports = "<!-- <link rel=\"stylesheet\" href=\"https://stackpath.bootstr
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return AddPanelComponent; });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__angular_core__ = __webpack_require__("./node_modules/@angular/core/esm5/core.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__db_accessor_service__ = __webpack_require__("./src/app/db-accessor.service.ts");
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -47,22 +48,73 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 
+
 var AddPanelComponent = /** @class */ (function () {
-    function AddPanelComponent() {
+    // use "private here so that we dont have to use this.db = db"
+    function AddPanelComponent(dbAccessor) {
+        this.dbAccessor = dbAccessor;
+        // dbAccessor: any;
         this.isClick = false;
     }
     AddPanelComponent.prototype.ngOnInit = function () {
+        this.mapRef.addSearch('add-address');
+    };
+    AddPanelComponent.prototype.ngAfterViewInit = function () {
     };
     AddPanelComponent.prototype.onClick = function () {
         this.isClick = !this.isClick;
+        // this.mapRef.addSearch('add-address');
     };
+    AddPanelComponent.prototype.addRecord = function (time, type) {
+        var _this = this;
+        var loc;
+        console.log('Adding one');
+        console.log(this.markers);
+        this.mapRef.geocoder.geocode({ address: this.addAddress,
+            componentRestrictions: { locality: 'California' }
+        }, function (results, status) {
+            if (status === google.maps.GeocoderStatus.OK) {
+                console.log(results);
+                loc = results[0].geometry.location;
+            }
+            else {
+                window.alert('We could not find that location - try entering a more' +
+                    ' specific place.');
+            }
+        });
+        var newRecord = {
+            location: loc,
+            address: this.addAddress,
+            time: time,
+            type: type
+        };
+        console.log(newRecord);
+        this.dbAccessor.addOne(newRecord).subscribe(function (record) {
+            _this.records.push(record);
+            _this.mapRef.hideMarkers();
+            _this.mapRef.LoadMarkers();
+            _this.mapRef.showListings();
+        });
+    };
+    __decorate([
+        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])(),
+        __metadata("design:type", Object)
+    ], AddPanelComponent.prototype, "markers", void 0);
+    __decorate([
+        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])(),
+        __metadata("design:type", Object)
+    ], AddPanelComponent.prototype, "mapRef", void 0);
+    __decorate([
+        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])(),
+        __metadata("design:type", Object)
+    ], AddPanelComponent.prototype, "records", void 0);
     AddPanelComponent = __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["m" /* Component */])({
             selector: 'app-add-panel',
             template: __webpack_require__("./src/app/add-panel/add-panel.component.html"),
             styles: [__webpack_require__("./src/app/add-panel/add-panel.component.css")]
         }),
-        __metadata("design:paramtypes", [])
+        __metadata("design:paramtypes", [__WEBPACK_IMPORTED_MODULE_1__db_accessor_service__["a" /* DbAccessorService */]])
     ], AddPanelComponent);
     return AddPanelComponent;
 }());
@@ -81,7 +133,7 @@ module.exports = "#map {\n    bottom:0px;\n    height: 100%;\n    left: 20%;\n  
 /***/ "./src/app/app.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<!--The content below is only a placeholder and can be replaced.-->\n<div class=\"container22\">\n    <app-side-panel [mapRef]='this'></app-side-panel>\n    <app-map id=\"map\"></app-map>\n</div>\n\n\n<!-- <script>\n    var map;\n\n    // Create a new blank array for all the listing markers.\n    var markers = [];\n\n    // This global polygon variable is to ensure only ONE polygon is rendered.\n    var polygon = null;\n\n    // Create placemarkers array to use in multiple functions to have control\n    // over the number of places that show.\n    var placeMarkers = [];\n\n    function initMap() {\n      // Create a styles array to use with the map.\n      var styles = [\n        {\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#ebe3cd\"\n            }\n          ]\n        },\n        {\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#523735\"\n            }\n          ]\n        },\n        {\n          \"elementType\": \"labels.text.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#f5f1e6\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"administrative\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#c9b2a6\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"administrative.land_parcel\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#dcd2be\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"administrative.land_parcel\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#ae9e90\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"landscape.natural\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#93817c\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi.park\",\n          \"elementType\": \"geometry.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#a5b076\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi.park\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#447530\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#f5f1e6\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.arterial\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#fdfcf8\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#f8c967\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#e9bc62\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway.controlled_access\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#e98d58\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway.controlled_access\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#db8555\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.local\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#806b63\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.line\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.line\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#8f7d77\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.line\",\n          \"elementType\": \"labels.text.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#ebe3cd\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.station\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"water\",\n          \"elementType\": \"geometry.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#b9d3c2\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"water\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#92998d\"\n            }\n          ]\n        }\n      ];\n\n      // Constructor creates a new map - only center and zoom are required.\n      map = new google.maps.Map(document.getElementById('map'), {\n        center: {lat: 37.51157, lng: -122.134},\n        zoom: 11,\n        styles: styles,\n        mapTypeControl: false\n      });\n\n      // This autocomplete is for use in the search within time entry box.\n      var timeAutocomplete = new google.maps.places.Autocomplete(\n          document.getElementById('search-within-time-text'));\n      // This autocomplete is for use in the geocoder entry box.\n      var zoomAutocomplete = new google.maps.places.Autocomplete(\n          document.getElementById('zoom-to-area-text'));\n      // Bias the boundaries within the map for the zoom to area text.\n      zoomAutocomplete.bindTo('bounds', map);\n      // Create a searchbox in order to execute a places search\n      var searchBox = new google.maps.places.SearchBox(\n          document.getElementById('places-search'));\n      // Bias the searchbox to within the bounds of the map.\n      searchBox.setBounds(map.getBounds());\n\n      // These are the real estate listings that will be shown to the user.\n      // Normally we'd have these in a database instead.\n      var locations = [\n        {title: 'Park Ave Penthouse', location: {lat: 40.7713024, lng: -73.9632393}},\n        {title: 'Chelsea Loft', location: {lat: 40.7444883, lng: -73.9949465}},\n        {title: 'Union Square Open Floor Plan', location: {lat: 40.7347062, lng: -73.9895759}},\n        {title: 'East Village Hip Studio', location: {lat: 40.7281777, lng: -73.984377}},\n        {title: 'TriBeCa Artsy Bachelor Pad', location: {lat: 40.7195264, lng: -74.0089934}},\n        {title: 'Chinatown Homey Space', location: {lat: 40.7180628, lng: -73.9961237}}\n      ];\n\n      var largeInfowindow = new google.maps.InfoWindow();\n\n      // Initialize the drawing manager.\n      var drawingManager = new google.maps.drawing.DrawingManager({\n        drawingMode: google.maps.drawing.OverlayType.POLYGON,\n        drawingControl: true,\n        drawingControlOptions: {\n          position: google.maps.ControlPosition.TOP_LEFT,\n          drawingModes: [\n            google.maps.drawing.OverlayType.POLYGON\n          ]\n        }\n      });\n\n      // Style the markers a bit. This will be our listing marker icon.\n      var defaultIcon = makeMarkerIcon('0091ff');\n\n      // Create a \"highlighted location\" marker color for when the user\n      // mouses over the marker.\n      var highlightedIcon = makeMarkerIcon('FFFF24');\n\n      // The following group uses the location array to create an array of markers on initialize.\n      for (var i = 0; i < locations.length; i++) {\n        // Get the position from the location array.\n        var position = locations[i].location;\n        var title = locations[i].title;\n        // Create a marker per location, and put into markers array.\n        var marker = new google.maps.Marker({\n          position: position,\n          title: title,\n          animation: google.maps.Animation.DROP,\n          icon: defaultIcon,\n          id: i\n        });\n        // Push the marker to our array of markers.\n        markers.push(marker);\n        // Create an onclick event to open the large infowindow at each marker.\n        marker.addListener('click', function() {\n          populateInfoWindow(this, largeInfowindow);\n        });\n        // Two event listeners - one for mouseover, one for mouseout,\n        // to change the colors back and forth.\n        marker.addListener('mouseover', function() {\n          this.setIcon(highlightedIcon);\n        });\n        marker.addListener('mouseout', function() {\n          this.setIcon(defaultIcon);\n        });\n      }\n      //document.getElementById('show-listings').addEventListener('click', showListings);\n\n      document.getElementById('hide-listings').addEventListener('click', function() {\n        hideMarkers(markers);\n      });\n\n      document.getElementById('toggle-drawing').addEventListener('click', function() {\n        toggleDrawing(drawingManager);\n      });\n\n      document.getElementById('zoom-to-area').addEventListener('click', function() {\n        zoomToArea();\n      });\n\n      document.getElementById('search-within-time').addEventListener('click', function() {\n        searchWithinTime();\n      });\n\n      // Listen for the event fired when the user selects a prediction from the\n      // picklist and retrieve more details for that place.\n      searchBox.addListener('places_changed', function() {\n        searchBoxPlaces(this);\n      });\n\n      // Listen for the event fired when the user selects a prediction and clicks\n      // \"go\" more details for that place.\n      document.getElementById('go-places').addEventListener('click', textSearchPlaces);\n\n      // Add an event listener so that the polygon is captured,  call the\n      // searchWithinPolygon function. This will show the markers in the polygon,\n      // and hide any outside of it.\n      drawingManager.addListener('overlaycomplete', function(event) {\n        // First, check if there is an existing polygon.\n        // If there is, get rid of it and remove the markers\n        if (polygon) {\n          polygon.setMap(null);\n          hideMarkers(markers);\n        }\n        // Switching the drawing mode to the HAND (i.e., no longer drawing).\n        drawingManager.setDrawingMode(null);\n        // Creating a new editable polygon from the overlay.\n        polygon = event.overlay;\n        polygon.setEditable(true);\n        // Searching within the polygon.\n        searchWithinPolygon(polygon);\n        // Make sure the search is re-done if the poly is changed.\n        polygon.getPath().addListener('set_at', searchWithinPolygon);\n        polygon.getPath().addListener('insert_at', searchWithinPolygon);\n      });\n    }\n\n    // This function populates the infowindow when the marker is clicked. We'll only allow\n    // one infowindow which will open at the marker that is clicked, and populate based\n    // on that markers position.\n    function populateInfoWindow(marker, infowindow) {\n      // Check to make sure the infowindow is not already opened on this marker.\n      if (infowindow.marker != marker) {\n        // Clear the infowindow content to give the streetview time to load.\n        infowindow.setContent('');\n        infowindow.marker = marker;\n        // Make sure the marker property is cleared if the infowindow is closed.\n        infowindow.addListener('closeclick', function() {\n          infowindow.marker = null;\n        });\n        var streetViewService = new google.maps.StreetViewService();\n        var radius = 50;\n        // In case the status is OK, which means the pano was found, compute the\n        // position of the streetview image, then calculate the heading, then get a\n        // panorama from that and set the options\n        function getStreetView(data, status) {\n          if (status == google.maps.StreetViewStatus.OK) {\n            var nearStreetViewLocation = data.location.latLng;\n            var heading = google.maps.geometry.spherical.computeHeading(\n              nearStreetViewLocation, marker.position);\n              infowindow.setContent('<div>' + marker.title + '</div><div id=\"pano\"></div>');\n              var panoramaOptions = {\n                position: nearStreetViewLocation,\n                pov: {\n                  heading: heading,\n                  pitch: 30\n                }\n              };\n            var panorama = new google.maps.StreetViewPanorama(\n              document.getElementById('pano'), panoramaOptions);\n          } else {\n            infowindow.setContent('<div>' + marker.title + '</div>' +\n              '<div>No Street View Found</div>');\n          }\n        }\n        // Use streetview service to get the closest streetview image within\n        // 50 meters of the markers position\n        streetViewService.getPanoramaByLocation(marker.position, radius, getStreetView);\n        // Open the infowindow on the correct marker.\n        infowindow.open(map, marker);\n      }\n    }\n\n    // This function will loop through the markers array and display them all.\n    function showListings() {\n      var bounds = new google.maps.LatLngBounds();\n      // Extend the boundaries of the map for each marker and display the marker\n      for (var i = 0; i < markers.length; i++) {\n        markers[i].setMap(map);\n        bounds.extend(markers[i].position);\n      }\n      map.fitBounds(bounds);\n    }\n\n    // This function will loop through the listings and hide them all.\n    function hideMarkers(markers) {\n      for (var i = 0; i < markers.length; i++) {\n        markers[i].setMap(null);\n      }\n    }\n\n    // This function takes in a COLOR, and then creates a new marker\n    // icon of that color. The icon will be 21 px wide by 34 high, have an origin\n    // of 0, 0 and be anchored at 10, 34).\n    function makeMarkerIcon(markerColor) {\n      var markerImage = new google.maps.MarkerImage(\n        'http://chart.googleapis.com/chart?chst=d_map_spin&chld=1.15|0|'+ markerColor +\n        '|40|_|%E2%80%A2',\n        new google.maps.Size(21, 34),\n        new google.maps.Point(0, 0),\n        new google.maps.Point(10, 34),\n        new google.maps.Size(21,34));\n      return markerImage;\n    }\n\n    // This shows and hides (respectively) the drawing options.\n    function toggleDrawing(drawingManager) {\n      if (drawingManager.map) {\n        drawingManager.setMap(null);\n        // In case the user drew anything, get rid of the polygon\n        if (polygon !== null) {\n          polygon.setMap(null);\n        }\n      } else {\n        drawingManager.setMap(map);\n      }\n    }\n\n    // This function hides all markers outside the polygon,\n    // and shows only the ones within it. This is so that the\n    // user can specify an exact area of search.\n    function searchWithinPolygon() {\n      for (var i = 0; i < markers.length; i++) {\n        if (google.maps.geometry.poly.containsLocation(markers[i].position, polygon)) {\n          markers[i].setMap(map);\n        } else {\n          markers[i].setMap(null);\n        }\n      }\n    }\n\n    // This function takes the input value in the find nearby area text input\n    // locates it, and then zooms into that area. This is so that the user can\n    // show all listings, then decide to focus on one area of the map.\n    function zoomToArea() {\n      // Initialize the geocoder.\n      var geocoder = new google.maps.Geocoder();\n      // Get the address or place that the user entered.\n      var address = document.getElementById('zoom-to-area-text').value;\n      // Make sure the address isn't blank.\n      if (address == '') {\n        window.alert('You must enter an area, or address.');\n      } else {\n        // Geocode the address/area entered to get the center. Then, center the map\n        // on it and zoom in\n        geocoder.geocode(\n          { address: address,\n            componentRestrictions: {locality: 'New York'}\n          }, function(results, status) {\n            if (status == google.maps.GeocoderStatus.OK) {\n              map.setCenter(results[0].geometry.location);\n              map.setZoom(15);\n            } else {\n              window.alert('We could not find that location - try entering a more' +\n                  ' specific place.');\n            }\n          });\n        }\n      }\n\n    // This function allows the user to input a desired travel time, in\n    // minutes, and a travel mode, and a location - and only show the listings\n    // that are within that travel time (via that travel mode) of the location\n    function searchWithinTime() {\n      // Initialize the distance matrix service.\n      var distanceMatrixService = new google.maps.DistanceMatrixService;\n      var address = document.getElementById('search-within-time-text').value;\n      // Check to make sure the place entered isn't blank.\n      if (address == '') {\n        window.alert('You must enter an address.');\n      } else {\n        hideMarkers(markers);\n        // Use the distance matrix service to calculate the duration of the\n        // routes between all our markers, and the destination address entered\n        // by the user. Then put all the origins into an origin matrix.\n        var origins = [];\n        for (var i = 0; i < markers.length; i++) {\n          origins[i] = markers[i].position;\n        }\n        var destination = address;\n        var mode = document.getElementById('mode').value;\n        // Now that both the origins and destination are defined, get all the\n        // info for the distances between them.\n        distanceMatrixService.getDistanceMatrix({\n          origins: origins,\n          destinations: [destination],\n          travelMode: google.maps.TravelMode[mode],\n          unitSystem: google.maps.UnitSystem.IMPERIAL,\n        }, function(response, status) {\n          if (status !== google.maps.DistanceMatrixStatus.OK) {\n            window.alert('Error was: ' + status);\n          } else {\n            displayMarkersWithinTime(response);\n          }\n        });\n      }\n    }\n\n    // This function will go through each of the results, and,\n    // if the distance is LESS than the value in the picker, show it on the map.\n    function displayMarkersWithinTime(response) {\n      var maxDuration = document.getElementById('max-duration').value;\n      var origins = response.originAddresses;\n      var destinations = response.destinationAddresses;\n      // Parse through the results, and get the distance and duration of each.\n      // Because there might be  multiple origins and destinations we have a nested loop\n      // Then, make sure at least 1 result was found.\n      var atLeastOne = false;\n      for (var i = 0; i < origins.length; i++) {\n        var results = response.rows[i].elements;\n        for (var j = 0; j < results.length; j++) {\n          var element = results[j];\n          if (element.status === \"OK\") {\n            // The distance is returned in feet, but the TEXT is in miles. If we wanted to switch\n            // the function to show markers within a user-entered DISTANCE, we would need the\n            // value for distance, but for now we only need the text.\n            var distanceText = element.distance.text;\n            // Duration value is given in seconds so we make it MINUTES. We need both the value\n            // and the text.\n            var duration = element.duration.value / 60;\n            var durationText = element.duration.text;\n            if (duration <= maxDuration) {\n              //the origin [i] should = the markers[i]\n              markers[i].setMap(map);\n              atLeastOne = true;\n              // Create a mini infowindow to open immediately and contain the\n              // distance and duration\n              var infowindow = new google.maps.InfoWindow({\n                content: durationText + ' away, ' + distanceText +\n                  '<div><input type=\\\"button\\\" value=\\\"View Route\\\" onclick =' +\n                  '\\\"displayDirections(&quot;' + origins[i] + '&quot;);\\\"></input></div>'\n              });\n              infowindow.open(map, markers[i]);\n              // Put this in so that this small window closes if the user clicks\n              // the marker, when the big infowindow opens\n              markers[i].infowindow = infowindow;\n              google.maps.event.addListener(markers[i], 'click', function() {\n                this.infowindow.close();\n              });\n            }\n          }\n        }\n      }\n      if (!atLeastOne) {\n        window.alert('We could not find any locations within that distance!');\n      }\n    }\n\n    // This function is in response to the user selecting \"show route\" on one\n    // of the markers within the calculated distance. This will display the route\n    // on the map.\n    function displayDirections(origin) {\n      hideMarkers(markers);\n      var directionsService = new google.maps.DirectionsService;\n      // Get the destination address from the user entered value.\n      var destinationAddress =\n          document.getElementById('search-within-time-text').value;\n      // Get mode again from the user entered value.\n      var mode = document.getElementById('mode').value;\n      directionsService.route({\n        // The origin is the passed in marker's position.\n        origin: origin,\n        // The destination is user entered address.\n        destination: destinationAddress,\n        travelMode: google.maps.TravelMode[mode]\n      }, function(response, status) {\n        if (status === google.maps.DirectionsStatus.OK) {\n          var directionsDisplay = new google.maps.DirectionsRenderer({\n            map: map,\n            directions: response,\n            draggable: true,\n            polylineOptions: {\n              strokeColor: 'green'\n            }\n          });\n        } else {\n          window.alert('Directions request failed due to ' + status);\n        }\n      });\n    }\n\n    // This function fires when the user selects a searchbox picklist item.\n    // It will do a nearby search using the selected query string or place.\n    function searchBoxPlaces(searchBox) {\n      hideMarkers(placeMarkers);\n      var places = searchBox.getPlaces();\n      if (places.length == 0) {\n        window.alert('We did not find any places matching that search!');\n      } else {\n      // For each place, get the icon, name and location.\n        createMarkersForPlaces(places);\n      }\n    }\n\n    // This function firest when the user select \"go\" on the places search.\n    // It will do a nearby search using the entered query string or place.\n    function textSearchPlaces() {\n      var bounds = map.getBounds();\n      hideMarkers(placeMarkers);\n      var placesService = new google.maps.places.PlacesService(map);\n      placesService.textSearch({\n        query: document.getElementById('places-search').value,\n        bounds: bounds\n      }, function(results, status) {\n        if (status === google.maps.places.PlacesServiceStatus.OK) {\n          createMarkersForPlaces(results);\n        }\n      });\n    }\n\n    // This function creates markers for each place found in either places search.\n    function createMarkersForPlaces(places) {\n      var bounds = new google.maps.LatLngBounds();\n      for (var i = 0; i < places.length; i++) {\n        var place = places[i];\n        var icon = {\n          url: place.icon,\n          size: new google.maps.Size(35, 35),\n          origin: new google.maps.Point(0, 0),\n          anchor: new google.maps.Point(15, 34),\n          scaledSize: new google.maps.Size(25, 25)\n        };\n        // Create a marker for each place.\n        var marker = new google.maps.Marker({\n          map: map,\n          icon: icon,\n          title: place.name,\n          position: place.geometry.location,\n          id: place.place_id\n        });\n        // Create a single infowindow to be used with the place details information\n        // so that only one is open at once.\n        var placeInfoWindow = new google.maps.InfoWindow();\n        // If a marker is clicked, do a place details search on it in the next function.\n        marker.addListener('click', function() {\n          if (placeInfoWindow.marker == this) {\n            console.log(\"This infowindow already is on this marker!\");\n          } else {\n            getPlacesDetails(this, placeInfoWindow);\n          }\n        });\n        placeMarkers.push(marker);\n        if (place.geometry.viewport) {\n          // Only geocodes have viewport.\n          bounds.union(place.geometry.viewport);\n        } else {\n          bounds.extend(place.geometry.location);\n        }\n      }\n      map.fitBounds(bounds);\n    }\n\n  // This is the PLACE DETAILS search - it's the most detailed so it's only\n  // executed when a marker is selected, indicating the user wants more\n  // details about that place.\n  function getPlacesDetails(marker, infowindow) {\n    var service = new google.maps.places.PlacesService(map);\n    service.getDetails({\n      placeId: marker.id\n    }, function(place, status) {\n      if (status === google.maps.places.PlacesServiceStatus.OK) {\n        // Set the marker property on this infowindow so it isn't created again.\n        infowindow.marker = marker;\n        var innerHTML = '<div>';\n        if (place.name) {\n          innerHTML += '<strong>' + place.name + '</strong>';\n        }\n        if (place.formatted_address) {\n          innerHTML += '<br>' + place.formatted_address;\n        }\n        if (place.formatted_phone_number) {\n          innerHTML += '<br>' + place.formatted_phone_number;\n        }\n        if (place.opening_hours) {\n          innerHTML += '<br><br><strong>Hours:</strong><br>' +\n              place.opening_hours.weekday_text[0] + '<br>' +\n              place.opening_hours.weekday_text[1] + '<br>' +\n              place.opening_hours.weekday_text[2] + '<br>' +\n              place.opening_hours.weekday_text[3] + '<br>' +\n              place.opening_hours.weekday_text[4] + '<br>' +\n              place.opening_hours.weekday_text[5] + '<br>' +\n              place.opening_hours.weekday_text[6];\n        }\n        if (place.photos) {\n          innerHTML += '<br><br><img src=\"' + place.photos[0].getUrl(\n              {maxHeight: 100, maxWidth: 200}) + '\">';\n        }\n        innerHTML += '</div>';\n        infowindow.setContent(innerHTML);\n        infowindow.open(map, marker);\n        // Make sure the marker property is cleared if the infowindow is closed.\n        infowindow.addListener('closeclick', function() {\n          infowindow.marker = null;\n        });\n      }\n    });\n  } -->\n\n  <!-- </script> -->\n<script async defer\n      src=\n      \"https://maps.googleapis.com/maps/api/js?libraries=places,geometry,drawing&key=AIzaSyDbuePk6SWPXXFDZv7Uo4YCClERESdXKiY&v=3&callback=initMap\">\n</script>\n\n"
+module.exports = "<!--The content below is only a placeholder and can be replaced.-->\n<div class=\"container22\">\n    <app-side-panel [mapRef]='this' [markers]='this.markers' [records]='this.crimeRecords'></app-side-panel>\n    <app-map id=\"map\"></app-map>\n</div>\n\n\n<!-- <script>\n    var map;\n\n    // Create a new blank array for all the listing markers.\n    var markers = [];\n\n    // This global polygon variable is to ensure only ONE polygon is rendered.\n    var polygon = null;\n\n    // Create placemarkers array to use in multiple functions to have control\n    // over the number of places that show.\n    var placeMarkers = [];\n\n    function initMap() {\n      // Create a styles array to use with the map.\n      var styles = [\n        {\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#ebe3cd\"\n            }\n          ]\n        },\n        {\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#523735\"\n            }\n          ]\n        },\n        {\n          \"elementType\": \"labels.text.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#f5f1e6\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"administrative\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#c9b2a6\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"administrative.land_parcel\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#dcd2be\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"administrative.land_parcel\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#ae9e90\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"landscape.natural\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#93817c\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi.park\",\n          \"elementType\": \"geometry.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#a5b076\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"poi.park\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#447530\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#f5f1e6\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.arterial\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#fdfcf8\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#f8c967\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#e9bc62\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway.controlled_access\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#e98d58\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.highway.controlled_access\",\n          \"elementType\": \"geometry.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#db8555\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"road.local\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#806b63\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.line\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.line\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#8f7d77\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.line\",\n          \"elementType\": \"labels.text.stroke\",\n          \"stylers\": [\n            {\n              \"color\": \"#ebe3cd\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"transit.station\",\n          \"elementType\": \"geometry\",\n          \"stylers\": [\n            {\n              \"color\": \"#dfd2ae\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"water\",\n          \"elementType\": \"geometry.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#b9d3c2\"\n            }\n          ]\n        },\n        {\n          \"featureType\": \"water\",\n          \"elementType\": \"labels.text.fill\",\n          \"stylers\": [\n            {\n              \"color\": \"#92998d\"\n            }\n          ]\n        }\n      ];\n\n      // Constructor creates a new map - only center and zoom are required.\n      map = new google.maps.Map(document.getElementById('map'), {\n        center: {lat: 37.51157, lng: -122.134},\n        zoom: 11,\n        styles: styles,\n        mapTypeControl: false\n      });\n\n      // This autocomplete is for use in the search within time entry box.\n      var timeAutocomplete = new google.maps.places.Autocomplete(\n          document.getElementById('search-within-time-text'));\n      // This autocomplete is for use in the geocoder entry box.\n      var zoomAutocomplete = new google.maps.places.Autocomplete(\n          document.getElementById('zoom-to-area-text'));\n      // Bias the boundaries within the map for the zoom to area text.\n      zoomAutocomplete.bindTo('bounds', map);\n      // Create a searchbox in order to execute a places search\n      var searchBox = new google.maps.places.SearchBox(\n          document.getElementById('places-search'));\n      // Bias the searchbox to within the bounds of the map.\n      searchBox.setBounds(map.getBounds());\n\n      // These are the real estate listings that will be shown to the user.\n      // Normally we'd have these in a database instead.\n      var locations = [\n        {title: 'Park Ave Penthouse', location: {lat: 40.7713024, lng: -73.9632393}},\n        {title: 'Chelsea Loft', location: {lat: 40.7444883, lng: -73.9949465}},\n        {title: 'Union Square Open Floor Plan', location: {lat: 40.7347062, lng: -73.9895759}},\n        {title: 'East Village Hip Studio', location: {lat: 40.7281777, lng: -73.984377}},\n        {title: 'TriBeCa Artsy Bachelor Pad', location: {lat: 40.7195264, lng: -74.0089934}},\n        {title: 'Chinatown Homey Space', location: {lat: 40.7180628, lng: -73.9961237}}\n      ];\n\n      var largeInfowindow = new google.maps.InfoWindow();\n\n      // Initialize the drawing manager.\n      var drawingManager = new google.maps.drawing.DrawingManager({\n        drawingMode: google.maps.drawing.OverlayType.POLYGON,\n        drawingControl: true,\n        drawingControlOptions: {\n          position: google.maps.ControlPosition.TOP_LEFT,\n          drawingModes: [\n            google.maps.drawing.OverlayType.POLYGON\n          ]\n        }\n      });\n\n      // Style the markers a bit. This will be our listing marker icon.\n      var defaultIcon = makeMarkerIcon('0091ff');\n\n      // Create a \"highlighted location\" marker color for when the user\n      // mouses over the marker.\n      var highlightedIcon = makeMarkerIcon('FFFF24');\n\n      // The following group uses the location array to create an array of markers on initialize.\n      for (var i = 0; i < locations.length; i++) {\n        // Get the position from the location array.\n        var position = locations[i].location;\n        var title = locations[i].title;\n        // Create a marker per location, and put into markers array.\n        var marker = new google.maps.Marker({\n          position: position,\n          title: title,\n          animation: google.maps.Animation.DROP,\n          icon: defaultIcon,\n          id: i\n        });\n        // Push the marker to our array of markers.\n        markers.push(marker);\n        // Create an onclick event to open the large infowindow at each marker.\n        marker.addListener('click', function() {\n          populateInfoWindow(this, largeInfowindow);\n        });\n        // Two event listeners - one for mouseover, one for mouseout,\n        // to change the colors back and forth.\n        marker.addListener('mouseover', function() {\n          this.setIcon(highlightedIcon);\n        });\n        marker.addListener('mouseout', function() {\n          this.setIcon(defaultIcon);\n        });\n      }\n      //document.getElementById('show-listings').addEventListener('click', showListings);\n\n      document.getElementById('hide-listings').addEventListener('click', function() {\n        hideMarkers(markers);\n      });\n\n      document.getElementById('toggle-drawing').addEventListener('click', function() {\n        toggleDrawing(drawingManager);\n      });\n\n      document.getElementById('zoom-to-area').addEventListener('click', function() {\n        zoomToArea();\n      });\n\n      document.getElementById('search-within-time').addEventListener('click', function() {\n        searchWithinTime();\n      });\n\n      // Listen for the event fired when the user selects a prediction from the\n      // picklist and retrieve more details for that place.\n      searchBox.addListener('places_changed', function() {\n        searchBoxPlaces(this);\n      });\n\n      // Listen for the event fired when the user selects a prediction and clicks\n      // \"go\" more details for that place.\n      document.getElementById('go-places').addEventListener('click', textSearchPlaces);\n\n      // Add an event listener so that the polygon is captured,  call the\n      // searchWithinPolygon function. This will show the markers in the polygon,\n      // and hide any outside of it.\n      drawingManager.addListener('overlaycomplete', function(event) {\n        // First, check if there is an existing polygon.\n        // If there is, get rid of it and remove the markers\n        if (polygon) {\n          polygon.setMap(null);\n          hideMarkers(markers);\n        }\n        // Switching the drawing mode to the HAND (i.e., no longer drawing).\n        drawingManager.setDrawingMode(null);\n        // Creating a new editable polygon from the overlay.\n        polygon = event.overlay;\n        polygon.setEditable(true);\n        // Searching within the polygon.\n        searchWithinPolygon(polygon);\n        // Make sure the search is re-done if the poly is changed.\n        polygon.getPath().addListener('set_at', searchWithinPolygon);\n        polygon.getPath().addListener('insert_at', searchWithinPolygon);\n      });\n    }\n\n    // This function populates the infowindow when the marker is clicked. We'll only allow\n    // one infowindow which will open at the marker that is clicked, and populate based\n    // on that markers position.\n    function populateInfoWindow(marker, infowindow) {\n      // Check to make sure the infowindow is not already opened on this marker.\n      if (infowindow.marker != marker) {\n        // Clear the infowindow content to give the streetview time to load.\n        infowindow.setContent('');\n        infowindow.marker = marker;\n        // Make sure the marker property is cleared if the infowindow is closed.\n        infowindow.addListener('closeclick', function() {\n          infowindow.marker = null;\n        });\n        var streetViewService = new google.maps.StreetViewService();\n        var radius = 50;\n        // In case the status is OK, which means the pano was found, compute the\n        // position of the streetview image, then calculate the heading, then get a\n        // panorama from that and set the options\n        function getStreetView(data, status) {\n          if (status == google.maps.StreetViewStatus.OK) {\n            var nearStreetViewLocation = data.location.latLng;\n            var heading = google.maps.geometry.spherical.computeHeading(\n              nearStreetViewLocation, marker.position);\n              infowindow.setContent('<div>' + marker.title + '</div><div id=\"pano\"></div>');\n              var panoramaOptions = {\n                position: nearStreetViewLocation,\n                pov: {\n                  heading: heading,\n                  pitch: 30\n                }\n              };\n            var panorama = new google.maps.StreetViewPanorama(\n              document.getElementById('pano'), panoramaOptions);\n          } else {\n            infowindow.setContent('<div>' + marker.title + '</div>' +\n              '<div>No Street View Found</div>');\n          }\n        }\n        // Use streetview service to get the closest streetview image within\n        // 50 meters of the markers position\n        streetViewService.getPanoramaByLocation(marker.position, radius, getStreetView);\n        // Open the infowindow on the correct marker.\n        infowindow.open(map, marker);\n      }\n    }\n\n    // This function will loop through the markers array and display them all.\n    function showListings() {\n      var bounds = new google.maps.LatLngBounds();\n      // Extend the boundaries of the map for each marker and display the marker\n      for (var i = 0; i < markers.length; i++) {\n        markers[i].setMap(map);\n        bounds.extend(markers[i].position);\n      }\n      map.fitBounds(bounds);\n    }\n\n    // This function will loop through the listings and hide them all.\n    function hideMarkers(markers) {\n      for (var i = 0; i < markers.length; i++) {\n        markers[i].setMap(null);\n      }\n    }\n\n    // This function takes in a COLOR, and then creates a new marker\n    // icon of that color. The icon will be 21 px wide by 34 high, have an origin\n    // of 0, 0 and be anchored at 10, 34).\n    function makeMarkerIcon(markerColor) {\n      var markerImage = new google.maps.MarkerImage(\n        'http://chart.googleapis.com/chart?chst=d_map_spin&chld=1.15|0|'+ markerColor +\n        '|40|_|%E2%80%A2',\n        new google.maps.Size(21, 34),\n        new google.maps.Point(0, 0),\n        new google.maps.Point(10, 34),\n        new google.maps.Size(21,34));\n      return markerImage;\n    }\n\n    // This shows and hides (respectively) the drawing options.\n    function toggleDrawing(drawingManager) {\n      if (drawingManager.map) {\n        drawingManager.setMap(null);\n        // In case the user drew anything, get rid of the polygon\n        if (polygon !== null) {\n          polygon.setMap(null);\n        }\n      } else {\n        drawingManager.setMap(map);\n      }\n    }\n\n    // This function hides all markers outside the polygon,\n    // and shows only the ones within it. This is so that the\n    // user can specify an exact area of search.\n    function searchWithinPolygon() {\n      for (var i = 0; i < markers.length; i++) {\n        if (google.maps.geometry.poly.containsLocation(markers[i].position, polygon)) {\n          markers[i].setMap(map);\n        } else {\n          markers[i].setMap(null);\n        }\n      }\n    }\n\n    // This function takes the input value in the find nearby area text input\n    // locates it, and then zooms into that area. This is so that the user can\n    // show all listings, then decide to focus on one area of the map.\n    function zoomToArea() {\n      // Initialize the geocoder.\n      var geocoder = new google.maps.Geocoder();\n      // Get the address or place that the user entered.\n      var address = document.getElementById('zoom-to-area-text').value;\n      // Make sure the address isn't blank.\n      if (address == '') {\n        window.alert('You must enter an area, or address.');\n      } else {\n        // Geocode the address/area entered to get the center. Then, center the map\n        // on it and zoom in\n        geocoder.geocode(\n          { address: address,\n            componentRestrictions: {locality: 'New York'}\n          }, function(results, status) {\n            if (status == google.maps.GeocoderStatus.OK) {\n              map.setCenter(results[0].geometry.location);\n              map.setZoom(15);\n            } else {\n              window.alert('We could not find that location - try entering a more' +\n                  ' specific place.');\n            }\n          });\n        }\n      }\n\n    // This function allows the user to input a desired travel time, in\n    // minutes, and a travel mode, and a location - and only show the listings\n    // that are within that travel time (via that travel mode) of the location\n    function searchWithinTime() {\n      // Initialize the distance matrix service.\n      var distanceMatrixService = new google.maps.DistanceMatrixService;\n      var address = document.getElementById('search-within-time-text').value;\n      // Check to make sure the place entered isn't blank.\n      if (address == '') {\n        window.alert('You must enter an address.');\n      } else {\n        hideMarkers(markers);\n        // Use the distance matrix service to calculate the duration of the\n        // routes between all our markers, and the destination address entered\n        // by the user. Then put all the origins into an origin matrix.\n        var origins = [];\n        for (var i = 0; i < markers.length; i++) {\n          origins[i] = markers[i].position;\n        }\n        var destination = address;\n        var mode = document.getElementById('mode').value;\n        // Now that both the origins and destination are defined, get all the\n        // info for the distances between them.\n        distanceMatrixService.getDistanceMatrix({\n          origins: origins,\n          destinations: [destination],\n          travelMode: google.maps.TravelMode[mode],\n          unitSystem: google.maps.UnitSystem.IMPERIAL,\n        }, function(response, status) {\n          if (status !== google.maps.DistanceMatrixStatus.OK) {\n            window.alert('Error was: ' + status);\n          } else {\n            displayMarkersWithinTime(response);\n          }\n        });\n      }\n    }\n\n    // This function will go through each of the results, and,\n    // if the distance is LESS than the value in the picker, show it on the map.\n    function displayMarkersWithinTime(response) {\n      var maxDuration = document.getElementById('max-duration').value;\n      var origins = response.originAddresses;\n      var destinations = response.destinationAddresses;\n      // Parse through the results, and get the distance and duration of each.\n      // Because there might be  multiple origins and destinations we have a nested loop\n      // Then, make sure at least 1 result was found.\n      var atLeastOne = false;\n      for (var i = 0; i < origins.length; i++) {\n        var results = response.rows[i].elements;\n        for (var j = 0; j < results.length; j++) {\n          var element = results[j];\n          if (element.status === \"OK\") {\n            // The distance is returned in feet, but the TEXT is in miles. If we wanted to switch\n            // the function to show markers within a user-entered DISTANCE, we would need the\n            // value for distance, but for now we only need the text.\n            var distanceText = element.distance.text;\n            // Duration value is given in seconds so we make it MINUTES. We need both the value\n            // and the text.\n            var duration = element.duration.value / 60;\n            var durationText = element.duration.text;\n            if (duration <= maxDuration) {\n              //the origin [i] should = the markers[i]\n              markers[i].setMap(map);\n              atLeastOne = true;\n              // Create a mini infowindow to open immediately and contain the\n              // distance and duration\n              var infowindow = new google.maps.InfoWindow({\n                content: durationText + ' away, ' + distanceText +\n                  '<div><input type=\\\"button\\\" value=\\\"View Route\\\" onclick =' +\n                  '\\\"displayDirections(&quot;' + origins[i] + '&quot;);\\\"></input></div>'\n              });\n              infowindow.open(map, markers[i]);\n              // Put this in so that this small window closes if the user clicks\n              // the marker, when the big infowindow opens\n              markers[i].infowindow = infowindow;\n              google.maps.event.addListener(markers[i], 'click', function() {\n                this.infowindow.close();\n              });\n            }\n          }\n        }\n      }\n      if (!atLeastOne) {\n        window.alert('We could not find any locations within that distance!');\n      }\n    }\n\n    // This function is in response to the user selecting \"show route\" on one\n    // of the markers within the calculated distance. This will display the route\n    // on the map.\n    function displayDirections(origin) {\n      hideMarkers(markers);\n      var directionsService = new google.maps.DirectionsService;\n      // Get the destination address from the user entered value.\n      var destinationAddress =\n          document.getElementById('search-within-time-text').value;\n      // Get mode again from the user entered value.\n      var mode = document.getElementById('mode').value;\n      directionsService.route({\n        // The origin is the passed in marker's position.\n        origin: origin,\n        // The destination is user entered address.\n        destination: destinationAddress,\n        travelMode: google.maps.TravelMode[mode]\n      }, function(response, status) {\n        if (status === google.maps.DirectionsStatus.OK) {\n          var directionsDisplay = new google.maps.DirectionsRenderer({\n            map: map,\n            directions: response,\n            draggable: true,\n            polylineOptions: {\n              strokeColor: 'green'\n            }\n          });\n        } else {\n          window.alert('Directions request failed due to ' + status);\n        }\n      });\n    }\n\n    // This function fires when the user selects a searchbox picklist item.\n    // It will do a nearby search using the selected query string or place.\n    function searchBoxPlaces(searchBox) {\n      hideMarkers(placeMarkers);\n      var places = searchBox.getPlaces();\n      if (places.length == 0) {\n        window.alert('We did not find any places matching that search!');\n      } else {\n      // For each place, get the icon, name and location.\n        createMarkersForPlaces(places);\n      }\n    }\n\n    // This function firest when the user select \"go\" on the places search.\n    // It will do a nearby search using the entered query string or place.\n    function textSearchPlaces() {\n      var bounds = map.getBounds();\n      hideMarkers(placeMarkers);\n      var placesService = new google.maps.places.PlacesService(map);\n      placesService.textSearch({\n        query: document.getElementById('places-search').value,\n        bounds: bounds\n      }, function(results, status) {\n        if (status === google.maps.places.PlacesServiceStatus.OK) {\n          createMarkersForPlaces(results);\n        }\n      });\n    }\n\n    // This function creates markers for each place found in either places search.\n    function createMarkersForPlaces(places) {\n      var bounds = new google.maps.LatLngBounds();\n      for (var i = 0; i < places.length; i++) {\n        var place = places[i];\n        var icon = {\n          url: place.icon,\n          size: new google.maps.Size(35, 35),\n          origin: new google.maps.Point(0, 0),\n          anchor: new google.maps.Point(15, 34),\n          scaledSize: new google.maps.Size(25, 25)\n        };\n        // Create a marker for each place.\n        var marker = new google.maps.Marker({\n          map: map,\n          icon: icon,\n          title: place.name,\n          position: place.geometry.location,\n          id: place.place_id\n        });\n        // Create a single infowindow to be used with the place details information\n        // so that only one is open at once.\n        var placeInfoWindow = new google.maps.InfoWindow();\n        // If a marker is clicked, do a place details search on it in the next function.\n        marker.addListener('click', function() {\n          if (placeInfoWindow.marker == this) {\n            console.log(\"This infowindow already is on this marker!\");\n          } else {\n            getPlacesDetails(this, placeInfoWindow);\n          }\n        });\n        placeMarkers.push(marker);\n        if (place.geometry.viewport) {\n          // Only geocodes have viewport.\n          bounds.union(place.geometry.viewport);\n        } else {\n          bounds.extend(place.geometry.location);\n        }\n      }\n      map.fitBounds(bounds);\n    }\n\n  // This is the PLACE DETAILS search - it's the most detailed so it's only\n  // executed when a marker is selected, indicating the user wants more\n  // details about that place.\n  function getPlacesDetails(marker, infowindow) {\n    var service = new google.maps.places.PlacesService(map);\n    service.getDetails({\n      placeId: marker.id\n    }, function(place, status) {\n      if (status === google.maps.places.PlacesServiceStatus.OK) {\n        // Set the marker property on this infowindow so it isn't created again.\n        infowindow.marker = marker;\n        var innerHTML = '<div>';\n        if (place.name) {\n          innerHTML += '<strong>' + place.name + '</strong>';\n        }\n        if (place.formatted_address) {\n          innerHTML += '<br>' + place.formatted_address;\n        }\n        if (place.formatted_phone_number) {\n          innerHTML += '<br>' + place.formatted_phone_number;\n        }\n        if (place.opening_hours) {\n          innerHTML += '<br><br><strong>Hours:</strong><br>' +\n              place.opening_hours.weekday_text[0] + '<br>' +\n              place.opening_hours.weekday_text[1] + '<br>' +\n              place.opening_hours.weekday_text[2] + '<br>' +\n              place.opening_hours.weekday_text[3] + '<br>' +\n              place.opening_hours.weekday_text[4] + '<br>' +\n              place.opening_hours.weekday_text[5] + '<br>' +\n              place.opening_hours.weekday_text[6];\n        }\n        if (place.photos) {\n          innerHTML += '<br><br><img src=\"' + place.photos[0].getUrl(\n              {maxHeight: 100, maxWidth: 200}) + '\">';\n        }\n        innerHTML += '</div>';\n        infowindow.setContent(innerHTML);\n        infowindow.open(map, marker);\n        // Make sure the marker property is cleared if the infowindow is closed.\n        infowindow.addListener('closeclick', function() {\n          infowindow.marker = null;\n        });\n      }\n    });\n  } -->\n\n  <!-- </script> -->\n<script async defer\n      src=\n      \"https://maps.googleapis.com/maps/api/js?libraries=places,geometry,drawing&key=AIzaSyDbuePk6SWPXXFDZv7Uo4YCClERESdXKiY&v=3&callback=initMap\">\n</script>\n\n"
 
 /***/ }),
 
@@ -92,7 +144,11 @@ module.exports = "<!--The content below is only a placeholder and can be replace
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return AppComponent; });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__angular_core__ = __webpack_require__("./node_modules/@angular/core/esm5/core.js");
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__side_panel_side_panel_component__ = __webpack_require__("./src/app/side-panel/side-panel.component.ts");
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__db_accessor_service__ = __webpack_require__("./src/app/db-accessor.service.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__add_panel_add_panel_component__ = __webpack_require__("./src/app/add-panel/add-panel.component.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__delete_panel_delete_panel_component__ = __webpack_require__("./src/app/delete-panel/delete-panel.component.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__db_accessor_service__ = __webpack_require__("./src/app/db-accessor.service.ts");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_rxjs_add_operator_map__ = __webpack_require__("./node_modules/rxjs/_esm5/add/operator/map.js");
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__angular_http__ = __webpack_require__("./node_modules/@angular/http/esm5/http.js");
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -106,10 +162,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 
 
 
+
+
+
+
 var AppComponent = /** @class */ (function () {
-    function AppComponent(dbAccessor) {
+    function AppComponent(dbAccessor, http) {
         var _this = this;
         this.dbAccessor = dbAccessor;
+        this.http = http;
         this.title = 'Tian\'s app';
         // Create a new blank array for all the listing markers.
         this.markers = [];
@@ -126,254 +187,32 @@ var AppComponent = /** @class */ (function () {
             _this.LoadMarkers();
             console.log(_this.crimeRecords);
         });
+        // this.getMapStyle()
+        // .subscribe(
+        //   rtn => {this.mapStyle = rtn;
+        //     this.google = google;
+        //     this.LoadMap();
+        //    }
+        // );
     }
     // tslint:disable-next-line:use-life-cycle-interface
     AppComponent.prototype.ngOnInit = function () {
-        var styles = [
-            {
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#ebe3cd'
-                    }
-                ]
-            },
-            {
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#523735'
-                    }
-                ]
-            },
-            {
-                'elementType': 'labels.text.stroke',
-                'stylers': [
-                    {
-                        'color': '#f5f1e6'
-                    }
-                ]
-            },
-            {
-                'featureType': 'administrative',
-                'elementType': 'geometry.stroke',
-                'stylers': [
-                    {
-                        'color': '#c9b2a6'
-                    }
-                ]
-            },
-            {
-                'featureType': 'administrative.land_parcel',
-                'elementType': 'geometry.stroke',
-                'stylers': [
-                    {
-                        'color': '#dcd2be'
-                    }
-                ]
-            },
-            {
-                'featureType': 'administrative.land_parcel',
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#ae9e90'
-                    }
-                ]
-            },
-            {
-                'featureType': 'landscape.natural',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#dfd2ae'
-                    }
-                ]
-            },
-            {
-                'featureType': 'poi',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#dfd2ae'
-                    }
-                ]
-            },
-            {
-                'featureType': 'poi',
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#93817c'
-                    }
-                ]
-            },
-            {
-                'featureType': 'poi.park',
-                'elementType': 'geometry.fill',
-                'stylers': [
-                    {
-                        'color': '#a5b076'
-                    }
-                ]
-            },
-            {
-                'featureType': 'poi.park',
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#447530'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#f5f1e6'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road.arterial',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#fdfcf8'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road.highway',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#f8c967'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road.highway',
-                'elementType': 'geometry.stroke',
-                'stylers': [
-                    {
-                        'color': '#e9bc62'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road.highway.controlled_access',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#e98d58'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road.highway.controlled_access',
-                'elementType': 'geometry.stroke',
-                'stylers': [
-                    {
-                        'color': '#db8555'
-                    }
-                ]
-            },
-            {
-                'featureType': 'road.local',
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#806b63'
-                    }
-                ]
-            },
-            {
-                'featureType': 'transit.line',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#dfd2ae'
-                    }
-                ]
-            },
-            {
-                'featureType': 'transit.line',
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#8f7d77'
-                    }
-                ]
-            },
-            {
-                'featureType': 'transit.line',
-                'elementType': 'labels.text.stroke',
-                'stylers': [
-                    {
-                        'color': '#ebe3cd'
-                    }
-                ]
-            },
-            {
-                'featureType': 'transit.station',
-                'elementType': 'geometry',
-                'stylers': [
-                    {
-                        'color': '#dfd2ae'
-                    }
-                ]
-            },
-            {
-                'featureType': 'water',
-                'elementType': 'geometry.fill',
-                'stylers': [
-                    {
-                        'color': '#b9d3c2'
-                    }
-                ]
-            },
-            {
-                'featureType': 'water',
-                'elementType': 'labels.text.fill',
-                'stylers': [
-                    {
-                        'color': '#92998d'
-                    }
-                ]
-            }
-        ];
+        var styles = this.mapStyle;
         this.map = new google.maps.Map(document.getElementById('map'), {
             center: { lat: 37.51157, lng: -122.134 },
             zoom: 11,
-            styles: styles,
+            styles: this.mapStyle,
             mapTypeControl: false
         });
+        // console.log(this.mapStyle);
+        // console.log(this.crimeRecords);
+        var geocoder = new google.maps.Geocoder();
+        // This autocomplete is for use in the geocoder entry box.
+        var zoomAutocomplete = new google.maps.places.Autocomplete(document.getElementById('zoom-to-area-text'));
+        // Bias the boundaries within the map for the zoom to area text.
+        zoomAutocomplete.bindTo('bounds', this.map);
         console.log(this.crimeRecords);
-        // // This autocomplete is for use in the search within time entry box.
-        // const timeAutocomplete = new google.maps.places.Autocomplete(
-        //   document.getElementById('search-within-time-text'));
-        // // This autocomplete is for use in the geocoder entry box.
-        // const zoomAutocomplete = new google.maps.places.Autocomplete(
-        //   document.getElementById('zoom-to-area-text'));
-        // // Bias the boundaries within the map for the zoom to area text.
-        //   zoomAutocomplete.bindTo('bounds', this.map);
-        // // Create a searchbox in order to execute a places search
-        // const searchBox = new google.maps.places.SearchBox(
-        //   document.getElementById('places-search'));
-        // // Bias the searchbox to within the bounds of the map.
-        // searchBox.setBounds(this.map.getBounds());
-        // These are the real estate listings that will be shown to the user.
-        // Normally we'd have these in a database instead.
-        var locations = [
-            { title: 'Park Ave Penthouse', location: { lat: 40.7713024, lng: -73.9632393 } },
-            { title: 'Chelsea Loft', location: { lat: 40.7444883, lng: -73.9949465 } },
-            { title: 'Union Square Open Floor Plan', location: { lat: 40.7347062, lng: -73.9895759 } },
-            { title: 'East Village Hip Studio', location: { lat: 40.7281777, lng: -73.984377 } },
-            { title: 'TriBeCa Artsy Bachelor Pad', location: { lat: 40.7195264, lng: -74.0089934 } },
-            { title: 'Chinatown Homey Space', location: { lat: 40.7180628, lng: -73.9961237 } }
-        ];
+        console.log(this.sidePanel);
         var largeInfowindow = new google.maps.InfoWindow();
         // Initialize the drawing manager.
         var drawingManager = new google.maps.drawing.DrawingManager({
@@ -386,51 +225,41 @@ var AppComponent = /** @class */ (function () {
                 ]
             }
         });
-        // document.getElementById('show-listings').addEventListener('click', this.showListings);
-        // document.getElementById('hide-listings').addEventListener('click', hideMarkers);
-        // document.getElementById('toggle-drawing').addEventListener('click', function() {
-        //   toggleDrawing(drawingManager);
-        // });
-        // document.getElementById('zoom-to-area').addEventListener('click', function() {
-        //   zoomToArea();
-        // });
-        // document.getElementById('search-within-time').addEventListener('click', function() {
-        //   searchWithinTime();
-        // });
-        // // Listen for the event fired when the user selects a prediction from the
-        // // picklist and retrieve more details for that place.
-        // searchBox.addListener('places_changed', function() {
-        //   searchBoxPlaces(this);
-        // });
-        // // Listen for the event fired when the user selects a prediction and clicks
-        // // "go" more details for that place.
-        // document.getElementById('go-places').addEventListener('click', textSearchPlaces);
-        // // Add an event listener so that the polygon is captured,  call the
-        // // searchWithinPolygon function. This will show the markers in the polygon,
-        // // and hide any outside of it.
-        // drawingManager.addListener('overlaycomplete', function(event) {
-        //   // First, check if there is an existing polygon.
-        //   // If there is, get rid of it and remove the markers
-        //   if (polygon) {
-        //     polygon.setMap(null);
-        //     hideMarkers(markers);
-        //   }
-        //   // Switching the drawing mode to the HAND (i.e., no longer drawing).
-        //   drawingManager.setDrawingMode(null);
-        //   // Creating a new editable polygon from the overlay.
-        //   polygon = event.overlay;
-        //   polygon.setEditable(true);
-        //   // Searching within the polygon.
-        //   searchWithinPolygon(polygon);
-        //   // Make sure the search is re-done if the poly is changed.
-        //   polygon.getPath().addListener('set_at', searchWithinPolygon);
-        //   polygon.getPath().addListener('insert_at', searchWithinPolygon);
-        // });
+    };
+    AppComponent.prototype.LoadMap = function () {
+        var styles = this.mapStyle;
+        this.map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: 37.51157, lng: -122.134 },
+            zoom: 11,
+            styles: this.mapStyle,
+            mapTypeControl: false
+        });
+        console.log(this.mapStyle);
+        console.log(this.crimeRecords);
+        var geocoder = new google.maps.Geocoder();
+        // This autocomplete is for use in the geocoder entry box.
+        var zoomAutocomplete = new google.maps.places.Autocomplete(document.getElementById('zoom-to-area-text'));
+        // Bias the boundaries within the map for the zoom to area text.
+        zoomAutocomplete.bindTo('bounds', this.map);
+        console.log(this.crimeRecords);
+        console.log(this.sidePanel);
+        var largeInfowindow = new google.maps.InfoWindow();
+        // Initialize the drawing manager.
+        var drawingManager = new google.maps.drawing.DrawingManager({
+            drawingMode: google.maps.drawing.OverlayType.POLYGON,
+            drawingControl: true,
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_LEFT,
+                drawingModes: [
+                    google.maps.drawing.OverlayType.POLYGON
+                ]
+            }
+        });
     };
     // This function will loop through the markers array and display them all.
     AppComponent.prototype.showListings = function () {
         var bounds = new google.maps.LatLngBounds();
-        console.log('3' + this.markers);
+        console.log('this.markers.length:' + this.markers.length + this.markers);
         // Extend the boundaries of the map for each marker and display the marker
         for (var i = 0; i < this.markers.length; i++) {
             this.markers[i].setMap(this.map);
@@ -456,7 +285,10 @@ var AppComponent = /** @class */ (function () {
         var geocoder = new google.maps.Geocoder();
         // Get the address or place that the user entered.
         // const address = document.getElementById('zoom-to-area-text').value;
+        console.log('zoomToArea');
+        console.log(this);
         var address = this.sidePanel.zoomPlace;
+        // console.log(address);
         // Make sure the address isn't blank.
         if (address === '') {
             window.alert('You must enter an area, or address.');
@@ -465,12 +297,12 @@ var AppComponent = /** @class */ (function () {
             // Geocode the address/area entered to get the center. Then, center the map
             // on it and zoom in
             geocoder.geocode({ address: address,
-                componentRestrictions: { locality: 'New York' }
+                componentRestrictions: { locality: 'California' }
             }, function (results, status) {
                 if (status === google.maps.GeocoderStatus.OK) {
                     console.log(results);
                     // const latlng = new google.maps.LatLng(39.51157, -132.134);
-                    _this.map.setZoom(15);
+                    _this.map.setZoom(13);
                     _this.map.setCenter(results[0].geometry.location);
                 }
                 else {
@@ -576,18 +408,36 @@ var AppComponent = /** @class */ (function () {
             infowindow.open(this.map, marker);
         }
     };
+    AppComponent.prototype.addSearch = function (tag) {
+        // This autocomplete is for use in the geocoder entry box.
+        var addAutocomplete = new google.maps.places.Autocomplete(document.getElementById(tag));
+        // Bias the boundaries within the map for the zoom to area text.
+        addAutocomplete.bindTo('bounds', this.map);
+    };
+    AppComponent.prototype.getMapStyle = function () {
+        // get users from api
+        return this.http.get('../assets/img/mapStyle.json')
+            .map(function (res) { return res.json(); });
+    };
     __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["_3" /* ViewChild */])(__WEBPACK_IMPORTED_MODULE_1__side_panel_side_panel_component__["a" /* SidePanelComponent */]),
         __metadata("design:type", __WEBPACK_IMPORTED_MODULE_1__side_panel_side_panel_component__["a" /* SidePanelComponent */])
     ], AppComponent.prototype, "sidePanel", void 0);
+    __decorate([
+        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["_3" /* ViewChild */])(__WEBPACK_IMPORTED_MODULE_2__add_panel_add_panel_component__["a" /* AddPanelComponent */]),
+        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["_3" /* ViewChild */])(__WEBPACK_IMPORTED_MODULE_3__delete_panel_delete_panel_component__["a" /* DeletePanelComponent */])
+        // private sidePanel: SidePanelComponent;
+        ,
+        __metadata("design:type", google.maps.Map)
+    ], AppComponent.prototype, "map", void 0);
     AppComponent = __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["m" /* Component */])({
             selector: 'app-root',
             template: __webpack_require__("./src/app/app.component.html"),
             styles: [__webpack_require__("./src/app/app.component.css")],
-            providers: [__WEBPACK_IMPORTED_MODULE_2__db_accessor_service__["a" /* DbAccessorService */]]
+            providers: [__WEBPACK_IMPORTED_MODULE_4__db_accessor_service__["a" /* DbAccessorService */]]
         }),
-        __metadata("design:paramtypes", [__WEBPACK_IMPORTED_MODULE_2__db_accessor_service__["a" /* DbAccessorService */]])
+        __metadata("design:paramtypes", [__WEBPACK_IMPORTED_MODULE_4__db_accessor_service__["a" /* DbAccessorService */], __WEBPACK_IMPORTED_MODULE_6__angular_http__["b" /* Http */]])
     ], AppComponent);
     return AppComponent;
 }());
@@ -641,7 +491,7 @@ var AppModule = /** @class */ (function () {
             ],
             imports: [
                 __WEBPACK_IMPORTED_MODULE_0__angular_platform_browser__["a" /* BrowserModule */],
-                __WEBPACK_IMPORTED_MODULE_3__angular_http__["b" /* HttpModule */],
+                __WEBPACK_IMPORTED_MODULE_3__angular_http__["c" /* HttpModule */],
                 __WEBPACK_IMPORTED_MODULE_2__angular_forms__["a" /* FormsModule */]
             ],
             providers: [__WEBPACK_IMPORTED_MODULE_8__db_accessor_service__["a" /* DbAccessorService */]],
@@ -686,9 +536,15 @@ var DbAccessorService = /** @class */ (function () {
         return this.http.get('http://localhost:3000/showAll')
             .map(function (res) { return res.json(); });
     };
+    DbAccessorService.prototype.addOne = function (newRecord) {
+        var headers = new __WEBPACK_IMPORTED_MODULE_1__angular_http__["a" /* Headers */]();
+        headers.append('Content-Type', 'application/json');
+        return this.http.post('http://localhost:3000/add', JSON.stringify(newRecord), { headers: headers })
+            .map(function (res) { return res.json(); });
+    };
     DbAccessorService = __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["w" /* Injectable */])(),
-        __metadata("design:paramtypes", [__WEBPACK_IMPORTED_MODULE_1__angular_http__["a" /* Http */]])
+        __metadata("design:paramtypes", [__WEBPACK_IMPORTED_MODULE_1__angular_http__["b" /* Http */]])
     ], DbAccessorService);
     return DbAccessorService;
 }());
@@ -707,7 +563,7 @@ module.exports = ".custom{\n    width: 45%;\n    margin-left: 10px;\n}\n\n.right
 /***/ "./src/app/delete-panel/delete-panel.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "\n<div>\n    <button type=\"button\" class=\"btn btn-danger btn-block\" (click)=\"onClick()\">Delete a report here</button>\n</div>\n<div *ngIf='isClick' id=\"deletePanel\">\n    <br/>\n    <span class=\"text\">Select an icon or enter a location:</span><br/>\n    <input id=\"address\" type=\"text\" placeholder=\"Ex: 5604 Melodia Cir, Dublin, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\"><br/>\n    <button type=\"button\" class=\"btn btn-danger right\">Delete</button>\n</div>"
+module.exports = "\n<div>\n    <button type=\"button\" class=\"btn btn-danger btn-block\" (click)=\"onClick()\">Delete a report here</button>\n</div>\n<div [ngClass]=\"{'d-none':this.isClick === false}\" id=\"deletePanel\">\n    <br/>\n    <span class=\"text\">Select an icon or enter a location:</span><br/>\n    <input id=\"delete-address\" type=\"text\" placeholder=\"Ex: 5604 Melodia Cir, Dublin, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\"><br/>\n    <button type=\"button\" class=\"btn btn-danger right\">Delete</button>\n</div>"
 
 /***/ }),
 
@@ -1033,7 +889,7 @@ module.exports = "\n@import \"https://fonts.googleapis.com/css?family=Poppins:30
 /***/ "./src/app/side-panel/side-panel.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<div class=\"wrapper2\">\n        <!-- Sidebar Header -->\n        <div class=\"sidebar-header2\">\n            <br/>\n            <h4 align=\"center\">Let's Build a Safer Community</h4>\n            <!-- <h6>\n                Welcome to Tian's App!\n            </h6> -->\n        </div>\n        <br/>\n        <div>\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"show-listings\" type=\"button\" value=\"Show Listings\" (click)=\"onClickShow()\">\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"hide-listings\" type=\"button\" value=\"Hide Listings\" (click)=\"onClickHide()\">\n          <div class=\"divider1\"></div>\n        </div>\n        <div>\n          <input [(ngModel)]=\"zoomPlace\" id=\"zoom-to-area-text\" type=\"text\" placeholder=\"Enter the area you want to check.\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"zoom-to-area\" type=\"button\" value=\"Zoom\" (click)=\"onClickZoom()\">\n        </div>\n        <app-add-panel></app-add-panel>\n        <br/>\n        <app-delete-panel></app-delete-panel>\n        <br/>\n        <hr>\n        <div id=\"draw\">\n            <span id=\"draw\">Draw a shape to search within it for the crime records</span><br/>\n            <input class=\"btn btn-default\" id=\"toggle-drawing\"  type=\"button\" value=\"Drawing Tools\">\n        </div>     \n        <br/>\n        <br/>\n        <hr>\n        <div>\n          <span class=\"text\"> Within </span>\n          <select id=\"max-duration\" class=\"custom-select\">\n            <option value=\"10\">10 min</option>\n            <option value=\"15\">15 min</option>\n            <option value=\"30\">30 min</option>\n            <option value=\"60\">1 hour</option>\n          </select>\n          <select id=\"mode\" class=\"custom-select\">\n            <option value=\"DRIVING\">drive</option>\n            <option value=\"WALKING\">walk</option>\n            <option value=\"BICYCLING\">bike</option>\n            <option value=\"TRANSIT\">transit ride</option>\n          </select>\n          <span class=\"text\">of</span>\n          <br/>\n          <input id=\"search-within-time-text\" type=\"text\" placeholder=\"Ex: UC Berkeley, Berkeley, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"search-within-time\" type=\"button\" value=\"Go\">\n        </div>\n        <hr>\n        <div>\n          <span class=\"text\">Search for nearby places</span>\n          <input id=\"places-search\" type=\"text\" placeholder=\"Ex: Pizza delivery in UCB\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">          \n          <input class=\"btn btn-default btn-ct\" id=\"go-places\" type=\"button\" value=\"Go\">\n        </div>\n\n</div>"
+module.exports = "<div class=\"wrapper2\">\n        <!-- Sidebar Header -->\n        <div class=\"sidebar-header2\">\n            <br/>\n            <h4 align=\"center\">Let's Build a Safer Community</h4>\n            <!-- <h6>\n                Welcome to Tian's App!\n            </h6> -->\n        </div>\n        <br/>\n        <div>\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"show-listings\" type=\"button\" value=\"Show Listings\" (click)=\"onClickShow()\">\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"hide-listings\" type=\"button\" value=\"Hide Listings\" (click)=\"onClickHide()\">\n          <div class=\"divider1\"></div>\n        </div>\n        <div>\n          <input [(ngModel)]=\"zoomPlace\" id=\"zoom-to-area-text\" type=\"text\" placeholder=\"Enter the area you want to check.\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"zoom-to-area\" type=\"button\" value=\"Zoom\" (click)=\"onClickZoom()\">\n        </div>\n        <app-add-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-add-panel>\n        <br/>\n        <app-delete-panel></app-delete-panel>\n        <br/>\n        <hr>\n        <div id=\"draw\">\n            <span id=\"draw\">Draw a shape to search within it for the crime records</span><br/>\n            <input class=\"btn btn-default\" id=\"toggle-drawing\"  type=\"button\" value=\"Drawing Tools\">\n        </div>     \n        <br/>\n        <br/>\n        <hr>\n        <div>\n          <span class=\"text\"> Within </span>\n          <select id=\"max-duration\" class=\"custom-select\">\n            <option value=\"10\">10 min</option>\n            <option value=\"15\">15 min</option>\n            <option value=\"30\">30 min</option>\n            <option value=\"60\">1 hour</option>\n          </select>\n          <select id=\"mode\" class=\"custom-select\">\n            <option value=\"DRIVING\">drive</option>\n            <option value=\"WALKING\">walk</option>\n            <option value=\"BICYCLING\">bike</option>\n            <option value=\"TRANSIT\">transit ride</option>\n          </select>\n          <span class=\"text\">of</span>\n          <br/>\n          <input id=\"search-within-time-text\" type=\"text\" placeholder=\"Ex: UC Berkeley, Berkeley, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"search-within-time\" type=\"button\" value=\"Go\">\n        </div>\n        <hr>\n        <div>\n          <span class=\"text\">Search for nearby places</span>\n          <input id=\"places-search\" type=\"text\" placeholder=\"Ex: Pizza delivery in UCB\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">          \n          <input class=\"btn btn-default btn-ct\" id=\"go-places\" type=\"button\" value=\"Go\">\n        </div>\n\n</div>"
 
 /***/ }),
 
@@ -1081,6 +937,10 @@ var SidePanelComponent = /** @class */ (function () {
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])(),
         __metadata("design:type", Object)
     ], SidePanelComponent.prototype, "mapRef", void 0);
+    __decorate([
+        Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])(),
+        __metadata("design:type", Object)
+    ], SidePanelComponent.prototype, "records", void 0);
     SidePanelComponent = __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["m" /* Component */])({
             selector: 'app-side-panel',

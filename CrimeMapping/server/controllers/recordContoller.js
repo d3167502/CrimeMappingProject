@@ -15,9 +15,9 @@ module.exports.showAll = function(req, res, next) {
 }
 
 module.exports.addOne = function(req, res, next) {
-    console.log("Showing all now..");
+    console.log("Adding one on server now..");
     var r = req.body;
-    if (!r.lat || !r.long || !r.type)
+    if (!r.location.lat || !r.location.lng || !r.time || !r.type)
     {
         res
         .status(400)
@@ -33,7 +33,7 @@ module.exports.addOne = function(req, res, next) {
 }
 
 module.exports.delete = function(req, res, next) {
-    console.log("Showing all now..");
+    console.log("Delete one now..");
     db.crimerecord.remove({_id: mongojs.ObjectId(req.params.id)}, function(err, records){
         if(err){
             res.send(err);
