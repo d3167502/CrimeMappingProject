@@ -262,7 +262,7 @@ var AppComponent = /** @class */ (function () {
         console.log(this.sidePanel);
         var largeInfowindow = new google.maps.InfoWindow();
         // Initialize the drawing manager.
-        var drawingManager = new google.maps.drawing.DrawingManager({
+        this.drawingManager = new google.maps.drawing.DrawingManager({
             drawingMode: google.maps.drawing.OverlayType.POLYGON,
             drawingControl: true,
             drawingControlOptions: {
@@ -271,6 +271,27 @@ var AppComponent = /** @class */ (function () {
                     google.maps.drawing.OverlayType.POLYGON
                 ]
             }
+        });
+        // Add an event listener so that the polygon is captured,  call the
+        // searchWithinPolygon function. This will show the markers in the polygon,
+        // and hide any outside of it.
+        this.drawingManager.addListener('overlaycomplete', function (event) {
+            // First, check if there is an existing polygon.
+            // If there is, get rid of it and remove the markers
+            if (_this.polygon) {
+                _this.polygon.setMap(null);
+                _this.hideMarkers(_this.markers);
+            }
+            // Switching the drawing mode to the HAND (i.e., no longer drawing).
+            _this.drawingManager.setDrawingMode(null);
+            // Creating a new editable polygon from the overlay.
+            _this.polygon = event.overlay;
+            _this.polygon.setEditable(true);
+            // Searching within the polygon.
+            _this.searchWithinPolygon();
+            // Make sure the search is re-done if the poly is changed.
+            _this.polygon.getPath().addListener('set_at', _this.searchWithinPolygon);
+            _this.polygon.getPath().addListener('insert_at', _this.searchWithinPolygon);
         });
     };
     AppComponent.prototype.LoadMap = function () {
@@ -316,9 +337,9 @@ var AppComponent = /** @class */ (function () {
         this.map.fitBounds(bounds);
     };
     // This function will loop through the listings and hide them all.
-    AppComponent.prototype.hideMarkers = function () {
-        for (var i = 0; i < this.markers.length; i++) {
-            this.markers[i].setMap(null);
+    AppComponent.prototype.hideMarkers = function (markers) {
+        for (var i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
         }
     };
     AppComponent.prototype.checkMarkers = function () {
@@ -332,11 +353,11 @@ var AppComponent = /** @class */ (function () {
         // const geocoder = new google.maps.Geocoder();
         // Get the address or place that the user entered.
         var _this = this;
-        // const address = document.getElementById('zoom-to-area-text').value;
+        // const a = document.getElementById('zoom-to-area-text');
         console.log('zoomToArea');
         console.log(this);
         var address = this.sidePanel.zoomPlace;
-        // console.log(address);
+        console.log(address);
         // Make sure the address isn't blank.
         if (address === '') {
             window.alert('You must enter an area, or address.');
@@ -510,6 +531,32 @@ var AppComponent = /** @class */ (function () {
             icon: defaultIcon,
             map: this.map
         });
+    };
+    // This shows and hides (respectively) the drawing options.
+    AppComponent.prototype.toggleDrawing = function (drawingManager) {
+        if (drawingManager.map) {
+            drawingManager.setMap(null);
+            // In case the user drew anything, get rid of the polygon
+            if (this.polygon !== null) {
+                this.polygon.setMap(null);
+            }
+        }
+        else {
+            drawingManager.setMap(this.map);
+        }
+    };
+    // This function hides all markers outside the polygon,
+    // and shows only the ones within it. This is so that the
+    // user can specify an exact area of search.
+    AppComponent.prototype.searchWithinPolygon = function () {
+        for (var i = 0; i < this.markers.length; i++) {
+            if (google.maps.geometry.poly.containsLocation(this.markers[i].position, this.polygon)) {
+                this.markers[i].setMap(this.map);
+            }
+            else {
+                this.markers[i].setMap(null);
+            }
+        }
     };
     __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["_3" /* ViewChild */])(__WEBPACK_IMPORTED_MODULE_1__side_panel_side_panel_component__["a" /* SidePanelComponent */]),
@@ -1036,7 +1083,7 @@ module.exports = "\n@import \"https://fonts.googleapis.com/css?family=Poppins:30
 /***/ "./src/app/side-panel/side-panel.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<div class=\"wrapper2\">\n        <!-- Sidebar Header -->\n        <div class=\"sidebar-header2\">\n            <br/>\n            <h4 align=\"center\">Let's Build a Safer Community</h4>\n            <!-- <h6>\n                Welcome to Tian's App!\n            </h6> -->\n        </div>\n        <br/>\n        <div>\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"show-listings\" type=\"button\" value=\"Show Listings\" (click)=\"onClickShow()\">\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"hide-listings\" type=\"button\" value=\"Hide Listings\" (click)=\"onClickHide()\">\n          <div class=\"divider1\"></div>\n        </div>\n        <div>\n          <input [(ngModel)]=\"addAddress\" id=\"zoom-to-area-text\" type=\"text\" placeholder=\"Enter the area you want to check.\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"zoom-to-area\" type=\"button\" value=\"Zoom\" (click)=\"onClickZoom()\">\n        </div>\n        <app-add-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-add-panel>\n        <br/>\n        <app-delete-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-delete-panel>\n        <br/>\n        <hr>\n        <div id=\"draw\">\n            <span id=\"draw\">Draw a shape to search within it    </span><br/>\n            <input class=\"btn btn-default\" id=\"toggle-drawing\"  type=\"button\" value=\"Drawing Tools\">\n        </div>     \n        <br/>\n        <br/>\n        <hr>\n        <div>\n          <span class=\"text\"> Within </span>\n          <select id=\"max-duration\" class=\"custom-select\">\n            <option value=\"10\">10 min</option>\n            <option value=\"15\">15 min</option>\n            <option value=\"30\">30 min</option>\n            <option value=\"60\">1 hour</option>\n          </select>\n          <select id=\"mode\" class=\"custom-select\">\n            <option value=\"DRIVING\">drive</option>\n            <option value=\"WALKING\">walk</option>\n            <option value=\"BICYCLING\">bike</option>\n            <option value=\"TRANSIT\">transit ride</option>\n          </select>\n          <span class=\"text\">of</span>\n          <br/>\n          <input id=\"search-within-time-text\" type=\"text\" placeholder=\"Ex: UC Berkeley, Berkeley, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"search-within-time\" type=\"button\" value=\"Go\">\n        </div>\n        <hr>\n        <div>\n          <span class=\"text\">Search for nearby places</span>\n          <input id=\"places-search\" type=\"text\" placeholder=\"Ex: Pizza delivery in UCB\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">          \n          <input class=\"btn btn-default btn-ct\" id=\"go-places\" type=\"button\" value=\"Go\">\n        </div>\n\n</div>"
+module.exports = "<div class=\"wrapper2\">\n        <!-- Sidebar Header -->\n        <div class=\"sidebar-header2\">\n            <br/>\n            <h4 align=\"center\">Let's Build a Safer Community</h4>\n            <!-- <h6>\n                Welcome to Tian's App!\n            </h6> -->\n        </div>\n        <br/>\n        <div>\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"show-listings\" type=\"button\" value=\"Show Listings\" (click)=\"onClickShow()\">\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"hide-listings\" type=\"button\" value=\"Hide Listings\" (click)=\"onClickHide()\">\n          <div class=\"divider1\"></div>\n        </div>\n        <div>\n          <input [(ngModel)]=\"zoomPlace\" id=\"zoom-to-area-text\" type=\"text\" placeholder=\"Enter the area you want to check.\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"zoom-to-area\" type=\"button\" value=\"Zoom\" (click)=\"onClickZoom()\">\n        </div>\n        <app-add-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-add-panel>\n        <br/>\n        <app-delete-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-delete-panel>\n        <br/>\n        <hr>\n        <div id=\"draw\">\n            <span id=\"draw\">Draw a shape to search within it    </span><br/>\n            <input class=\"btn btn-default\" id=\"toggle-drawing\"  type=\"button\" value=\"Drawing Tools\" (click)=\"OnClickDraw()\" >\n        </div>     \n        <br/>\n        <br/>\n        <hr>\n        <div>\n          <span class=\"text\"> Within </span>\n          <select id=\"max-duration\" class=\"custom-select\">\n            <option value=\"10\">10 min</option>\n            <option value=\"15\">15 min</option>\n            <option value=\"30\">30 min</option>\n            <option value=\"60\">1 hour</option>\n          </select>\n          <select id=\"mode\" class=\"custom-select\">\n            <option value=\"DRIVING\">drive</option>\n            <option value=\"WALKING\">walk</option>\n            <option value=\"BICYCLING\">bike</option>\n            <option value=\"TRANSIT\">transit ride</option>\n          </select>\n          <span class=\"text\">of</span>\n          <br/>\n          <input id=\"search-within-time-text\" type=\"text\" placeholder=\"Ex: UC Berkeley, Berkeley, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"search-within-time\" type=\"button\" value=\"Go\">\n        </div>\n        <hr>\n        <div>\n          <span class=\"text\">Search for nearby places</span>\n          <input id=\"places-search\" type=\"text\" placeholder=\"Ex: Pizza delivery in UCB\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">          \n          <input class=\"btn btn-default btn-ct\" id=\"go-places\" type=\"button\" value=\"Go\">\n        </div>\n\n</div>"
 
 /***/ }),
 
@@ -1076,10 +1123,13 @@ var SidePanelComponent = /** @class */ (function () {
     };
     SidePanelComponent.prototype.onClickHide = function () {
         // console.log('haha' + this.markers);
-        this.mapRef.hideMarkers();
+        this.mapRef.hideMarkers(this.mapRef.markers);
     };
     SidePanelComponent.prototype.onClickZoom = function () {
         this.mapRef.zoomToArea();
+    };
+    SidePanelComponent.prototype.OnClickDraw = function () {
+        this.mapRef.toggleDrawing(this.mapRef.drawingManager);
     };
     __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])('markers'),

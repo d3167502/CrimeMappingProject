@@ -14,6 +14,7 @@ export class SidePanelComponent implements OnInit {
   @Input('mapRef') mapRef;
   @Input('records') records;
   @Input() getAddress;
+  // @Output() zoomPlace;
 
   @ViewChild(AddPanelComponent) addPanel: AddPanelComponent;
   @ViewChild(DeletePanelComponent) deletePanel: DeletePanelComponent;
@@ -37,11 +38,14 @@ export class SidePanelComponent implements OnInit {
 
   onClickHide(): void {
     // console.log('haha' + this.markers);
-    this.mapRef.hideMarkers();
+    this.mapRef.hideMarkers(this.mapRef.markers);
   }
 
   onClickZoom(): void {
     this.mapRef.zoomToArea();
+  }
 
+  OnClickDraw(): void {
+    this.mapRef.toggleDrawing(this.mapRef.drawingManager);
   }
 }

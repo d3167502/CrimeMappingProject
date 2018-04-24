@@ -37,6 +37,7 @@ export class AppComponent {
   selectedExistingMarker: any;
   test: any;
   selectedAddress: any;
+  drawingManager: any;
   // largeInfowindow: any;
   // This global polygon variable is to ensure only ONE polygon is rendered.
   polygon = null;
@@ -92,7 +93,7 @@ export class AppComponent {
     const largeInfowindow = new google.maps.InfoWindow();
 
     // Initialize the drawing manager.
-    const drawingManager = new google.maps.drawing.DrawingManager({
+    this.drawingManager = new google.maps.drawing.DrawingManager({
       drawingMode: google.maps.drawing.OverlayType.POLYGON,
       drawingControl: true,
       drawingControlOptions: {
@@ -101,6 +102,28 @@ export class AppComponent {
           google.maps.drawing.OverlayType.POLYGON
         ]
       }
+    });
+
+    // Add an event listener so that the polygon is captured,  call the
+    // searchWithinPolygon function. This will show the markers in the polygon,
+    // and hide any outside of it.
+    this.drawingManager.addListener('overlaycomplete', (event) => {
+      // First, check if there is an existing polygon.
+      // If there is, get rid of it and remove the markers
+      if (this.polygon) {
+        this.polygon.setMap(null);
+        this.hideMarkers(this.markers);
+      }
+      // Switching the drawing mode to the HAND (i.e., no longer drawing).
+      this.drawingManager.setDrawingMode(null);
+      // Creating a new editable polygon from the overlay.
+      this.polygon = event.overlay;
+      this.polygon.setEditable(true);
+      // Searching within the polygon.
+      this.searchWithinPolygon();
+      // Make sure the search is re-done if the poly is changed.
+      this.polygon.getPath().addListener('set_at', this.searchWithinPolygon);
+      this.polygon.getPath().addListener('insert_at', this.searchWithinPolygon);
     });
 
   }
@@ -154,9 +177,9 @@ export class AppComponent {
     this.map.fitBounds(bounds);
   }
   // This function will loop through the listings and hide them all.
-  hideMarkers() {
-    for (let i = 0; i < this.markers.length; i++) {
-      this.markers[i].setMap(null);
+  hideMarkers(markers) {
+    for (let i = 0; i < markers.length; i++) {
+      markers[i].setMap(null);
     }
   }
 
@@ -172,11 +195,11 @@ export class AppComponent {
     // const geocoder = new google.maps.Geocoder();
     // Get the address or place that the user entered.
 
-    // const address = document.getElementById('zoom-to-area-text').value;
+    // const a = document.getElementById('zoom-to-area-text');
     console.log('zoomToArea');
     console.log(this);
     const address = this.sidePanel.zoomPlace;
-    // console.log(address);
+    console.log(address);
 
     // Make sure the address isn't blank.
     if (address === '') {
@@ -361,4 +384,31 @@ export class AppComponent {
         map: this.map
       });
   }
+    // This shows and hides (respectively) the drawing options.
+    toggleDrawing(drawingManager) {
+      if (drawingManager.map) {
+        drawingManager.setMap(null);
+        // In case the user drew anything, get rid of the polygon
+        if (this.polygon !== null) {
+          this.polygon.setMap(null);
+        }
+      } else {
+        drawingManager.setMap(this.map);
+      }
+    }
+
+    // This function hides all markers outside the polygon,
+    // and shows only the ones within it. This is so that the
+    // user can specify an exact area of search.
+    searchWithinPolygon() {
+      for (let i = 0; i < this.markers.length; i++) {
+        if (google.maps.geometry.poly.containsLocation(this.markers[i].position, this.polygon)) {
+          this.markers[i].setMap(this.map);
+        } else {
+          this.markers[i].setMap(null);
+        }
+      }
+    }
+
+
 }
