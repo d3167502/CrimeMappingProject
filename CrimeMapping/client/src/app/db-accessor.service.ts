@@ -21,4 +21,9 @@ export class DbAccessorService {
       .map(res => res.json());
   }
 
+  deleteOne(id) {
+    return this.http.delete('/delete/' + id)
+      .map(res => res.json());
+  }
+
 }

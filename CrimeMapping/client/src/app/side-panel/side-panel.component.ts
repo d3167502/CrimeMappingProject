@@ -1,4 +1,7 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, Output } from '@angular/core';
+import { AddPanelComponent } from '../add-panel/add-panel.component';
+import { DeletePanelComponent} from '../delete-panel/delete-panel.component';
+import { AfterViewInit, ViewChild } from '@angular/core';
 
 @Component({
   selector: 'app-side-panel',
@@ -7,9 +10,13 @@ import { Component, OnInit, Input } from '@angular/core';
 })
 export class SidePanelComponent implements OnInit {
 
-  @Input() markers;
-  @Input() mapRef;
-  @Input() records;
+  @Input('markers') markers;
+  @Input('mapRef') mapRef;
+  @Input('records') records;
+  @Input() getAddress;
+
+  @ViewChild(AddPanelComponent) addPanel: AddPanelComponent;
+  @ViewChild(DeletePanelComponent) deletePanel: DeletePanelComponent;
 
   shown = true;
   zoomPlace: string;
@@ -24,12 +31,12 @@ export class SidePanelComponent implements OnInit {
   }
 
   onClickShow(): void {
-    console.log('haha' + this.markers);
+    // console.log('haha' + this.markers);
     this.mapRef.showListings();
   }
 
   onClickHide(): void {
-    console.log('haha' + this.markers);
+    // console.log('haha' + this.markers);
     this.mapRef.hideMarkers();
   }
 

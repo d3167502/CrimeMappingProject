@@ -4,7 +4,9 @@
 </div>
 <div [ngClass]="{'d-none':this.isClick === false}" id="deletePanel">
     <br/>
-    <span class="text">Select an icon or enter a location:</span><br/>
-    <input id="delete-address" type="text" placeholder="Ex: 5604 Melodia Cir, Dublin, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm"><br/>
-    <button type="button" class="btn btn-danger right">Delete</button>
+    <form (submit)='deleteRecord()'>
+        <span class="text">Select an icon or enter a location:</span><br/>
+        <input [(ngModel)]="deleteAddress" name="delete_address" id="delete-address" type="text" placeholder="Ex: 5604 Melodia Cir, Dublin, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm"><br/>
+        <button type="submit" class="btn btn-danger right">Delete</button>
+    </form>
 </div>

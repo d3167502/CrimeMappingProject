@@ -1,4 +1,4 @@
-import { Component, ViewChildren } from '@angular/core';
+import { Component, ViewChildren, Output, EventEmitter, NgZone } from '@angular/core';
 import {} from '@types/googlemaps';
 import { AfterViewInit, ViewChild } from '@angular/core';
 import { SidePanelComponent } from './side-panel/side-panel.component';
@@ -19,9 +19,12 @@ declare const google: any;
 export class AppComponent {
   // @ViewChild('gmap') gmapElement: any;
   @ViewChild(SidePanelComponent) sidePanel: SidePanelComponent;
-  @ViewChild(AddPanelComponent)
-  @ViewChild(DeletePanelComponent)
-  // private sidePanel: SidePanelComponent;
+  @ViewChild(AddPanelComponent) addPanel: AddPanelComponent;
+  @ViewChild(DeletePanelComponent) deletePanel: DeletePanelComponent;
+
+  // @Output() addAddressChange = new EventEmitter();
+  // @Output() zoomPlaceChange = new EventEmitter();
+
   map: google.maps.Map;
   google: any;
   geocoder: google.maps.Geocoder;
@@ -30,6 +33,10 @@ export class AppComponent {
   markers: any[] = [];
   crimeRecords: any[];
   mapStyle: any[];
+  currentMarker: any;
+  selectedExistingMarker: any;
+  test: any;
+  selectedAddress: any;
   // largeInfowindow: any;
   // This global polygon variable is to ensure only ONE polygon is rendered.
   polygon = null;
@@ -38,7 +45,7 @@ export class AppComponent {
   // over the number of places that show.
   placeMarkers: any[] = [];
 
-  constructor(private dbAccessor: DbAccessorService, private http: Http) {
+  constructor(private dbAccessor: DbAccessorService, private http: Http, private zone: NgZone) {
     // this.crimeRecords =  this.dbAccessor.getAll();
     this.dbAccessor.getAll()
         .subscribe(rtn => {
@@ -64,10 +71,15 @@ export class AppComponent {
       styles: this.mapStyle,
       mapTypeControl: false
     });
+
+    this.map.addListener('click', (e) => {
+      this.placeMarker(e.latLng, this.map);
+    });
+
     // console.log(this.mapStyle);
     // console.log(this.crimeRecords);
 
-    const geocoder = new google.maps.Geocoder();
+    this.geocoder = new google.maps.Geocoder();
     // This autocomplete is for use in the geocoder entry box.
     const zoomAutocomplete = new google.maps.places.Autocomplete(
       document.getElementById('zoom-to-area-text'));
@@ -132,7 +144,8 @@ export class AppComponent {
   // This function will loop through the markers array and display them all.
   showListings() {
     const bounds = new google.maps.LatLngBounds();
-    console.log('this.markers.length:' + this.markers.length + this.markers);
+    console.log('this.markers.length:' + this.markers.length);
+    console.log(this.markers);
     // Extend the boundaries of the map for each marker and display the marker
     for (let i = 0; i < this.markers.length; i++) {
       this.markers[i].setMap(this.map);
@@ -156,7 +169,7 @@ export class AppComponent {
   // show all listings, then decide to focus on one area of the map.
   zoomToArea() {
     // Initialize the geocoder.
-    const geocoder = new google.maps.Geocoder();
+    // const geocoder = new google.maps.Geocoder();
     // Get the address or place that the user entered.
 
     // const address = document.getElementById('zoom-to-area-text').value;
@@ -171,12 +184,13 @@ export class AppComponent {
     } else {
       // Geocode the address/area entered to get the center. Then, center the map
       // on it and zoom in
-      geocoder.geocode(
+      this.geocoder.geocode(
         { address: address,
           componentRestrictions: {locality: 'California'}
         }, (results, status) => {
           if (status === google.maps.GeocoderStatus.OK) {
             console.log(results);
+            console.log(results[0].geometry.location.lat());
             // const latlng = new google.maps.LatLng(39.51157, -132.134);
             this.map.setZoom(13);
             this.map.setCenter(results[0].geometry.location);
@@ -189,6 +203,7 @@ export class AppComponent {
     }
 
     LoadMarkers() {
+    this.markers = [];
     const largeInfowindow = new google.maps.InfoWindow();
     // Style the markers a bit. This will be our listing marker icon.
 
@@ -197,11 +212,13 @@ export class AppComponent {
     const highlightedIcon = this.makeMarkerIcon('highlighted');
 
     // The following group uses the location array to create an array of markers on initialize.
+    console.log(this.crimeRecords.length);
     for (let i = 0; i < this.crimeRecords.length; i++) {
       // Get the position from the location array.
       const position = this.crimeRecords[i].location;
       const time = this.crimeRecords[i].time;
       const title = this.crimeRecords[i].type;
+      const _id = this.crimeRecords[i]._id;
       const defaultIcon = this.makeMarkerIcon(title);
       // Create a marker per location, and put into markers array.
       const marker = new google.maps.Marker({
@@ -209,7 +226,7 @@ export class AppComponent {
         title: title + '|' + time,
         animation: google.maps.Animation.DROP,
         icon: defaultIcon,
-        id: i
+        id: _id
       });
         // Push the marker to our array of markers.
       this.markers.push(marker);
@@ -246,7 +263,8 @@ export class AppComponent {
     // one infowindow which will open at the marker that is clicked, and populate based
     // on that markers position.
     populateInfoWindow(marker, infowindow) {
-      console.log('CLICK on icon');
+      console.log('CLICK on existing icon');
+      this.selectedExistingMarker = marker;
       // Check to make sure the infowindow is not already opened on this marker.
       if (infowindow.marker !== marker) {
         // Clear the infowindow content to give the streetview time to load.
@@ -265,27 +283,38 @@ export class AppComponent {
         // 50 meters of the markers position
 
         streetViewService.getPanoramaByLocation(marker.position, radius, (data, status) => {
-          if (status === google.maps.StreetViewStatus.OK) {
-            const nearStreetViewLocation = data.location.latLng;
-            const heading = google.maps.geometry.spherical.computeHeading(
-              nearStreetViewLocation, marker.position);
+          this.zone.run(() => {
+            if (status === google.maps.StreetViewStatus.OK) {
+              console.log('Showing info window');
+              console.log('data');
+              const nearStreetViewLocation = data.location.latLng;
+              const heading = google.maps.geometry.spherical.computeHeading(
+                nearStreetViewLocation, marker.position);
+                // tslint:disable-next-line:max-line-length
+                infowindow.setContent('<div style="width:400px; height:400px">' + '<div style="font-weight: bold">' + type + '</div><div style="font-weight: bold">' + 'Time: ' + time + '</div><div style="width:400px; height:360px" id="pano">zzz</div></div>');
+                const panoramaOptions = {
+                  position: nearStreetViewLocation,
+                  pov: {
+                    heading: heading,
+                    pitch: 30
+                  }
+                };
+              const panorama = new google.maps.StreetViewPanorama(
+                document.getElementById('pano'), panoramaOptions);
+                console.log(panorama);
+              if (this.currentMarker != null) {
+                this.currentMarker.setMap(null);
+              }
+              this.sidePanel.addPanel.addAddress = data.location.description;
+              this.sidePanel.deletePanel.deleteAddress = data.location.description;
+            } else {
               // tslint:disable-next-line:max-line-length
-              infowindow.setContent('<div style="width:400px; height:400px">' + '<div style="font-weight: bold">' + type + '</div><div style="font-weight: bold">' + 'Time: ' + time + '</div><div style="width:400px; height:360px" id="pano">zzz</div></div>');
-              const panoramaOptions = {
-                position: nearStreetViewLocation,
-                pov: {
-                  heading: heading,
-                  pitch: 30
-                }
-              };
-            const panorama = new google.maps.StreetViewPanorama(
-              document.getElementById('pano'), panoramaOptions);
-              console.log(panorama);
-          } else {
-            // tslint:disable-next-line:max-line-length
-            infowindow.setContent('<div style="font-weight: bold">' + type + '</div><div style="font-weight: bold">' + 'Time: ' + time + '</div>' +
-            '<div>No Street View Found</div>');
-          }
+              infowindow.setContent('<div style="font-weight: bold">' + type + '</div><div style="font-weight: bold">' + 'Time: ' + time + '</div>' +
+              '<div>No Street View Found</div>');
+              this.sidePanel.addPanel.addAddress = '';
+              this.sidePanel.deletePanel.deleteAddress = '';
+            }
+          });
         });
         // Open the infowindow on the correct marker.
         infowindow.open(this.map, marker);
@@ -305,4 +334,31 @@ export class AppComponent {
       return this.http.get('../assets/img/mapStyle.json')
           .map(res => res.json());
     }
+
+    placeMarker(position, map) {
+      if (this.currentMarker != null) {
+        this.currentMarker.setMap(null);
+      }
+      const defaultIcon = this.makeMarkerIcon('highlighted');
+      console.log(position);
+      const lat = position.lat();
+      const lng = position.lng();
+      const latlng = {lat: lat, lng: lng};
+      this.geocoder.geocode({'location': latlng}, (results, status) => {
+        this.zone.run(() => {   // useing Zone here because the Binding Model is not updating the UI
+          console.log(results[0].formatted_address);
+          this.sidePanel.addPanel.addAddress = results[0].formatted_address;
+          this.sidePanel.deletePanel.deleteAddress = results[0].formatted_address;
+          this.sidePanel.zoomPlace = results[0].formatted_address;
+          // this.sidePanel.deletePanel.onClick();
+        });
+        // this.selectedAddress = results[0].formatted_address;
+        // this.sidePanel.addPanel.ngOnInit();
+      });
+      this.currentMarker = new google.maps.Marker({
+        position: position,
+        icon: defaultIcon,
+        map: this.map
+      });
+  }
 }
