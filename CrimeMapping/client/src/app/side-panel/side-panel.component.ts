@@ -21,6 +21,9 @@ export class SidePanelComponent implements OnInit {
 
   shown = true;
   zoomPlace: string;
+  searchTimeAddress: string;
+  travelMode: string;
+  maxDuration: number;
 
   constructor() { }
 
@@ -47,5 +50,9 @@ export class SidePanelComponent implements OnInit {
 
   OnClickDraw(): void {
     this.mapRef.toggleDrawing(this.mapRef.drawingManager);
+  }
+
+  seachAddressDistance(): void {
+    this.mapRef.searchWithinTime();
   }
 }

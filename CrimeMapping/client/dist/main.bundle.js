@@ -175,7 +175,7 @@ module.exports = "#map {\n    bottom:0px;\n    height: 100%;\n    left: 20%;\n  
 /***/ "./src/app/app.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<!--The content below is only a placeholder and can be replaced.-->\n<div class=\"container1\">\n    <app-side-panel [getAddress]='this.selectedAddress' [mapRef]='this' [markers]='this.markers' [records]='this.crimeRecords'></app-side-panel>\n    <app-map id=\"map\"></app-map>\n</div>\n\n<script async defer\n      src=\n      \"https://maps.googleapis.com/maps/api/js?libraries=places,geometry,drawing&key=AIzaSyDbuePk6SWPXXFDZv7Uo4YCClERESdXKiY&v=3&callback=initMap\">\n</script>\n\n"
+module.exports = "<!--The content below is only a placeholder and can be replaced.-->\n<div class=\"container1\">\n    <app-side-panel [getAddress]='this.selectedAddress' [mapRef]='this' [markers]='this.markers' [records]='this.crimeRecords'></app-side-panel>\n    <app-map id=\"map\"></app-map>\n</div>\n\n<!-- <script async defer\n      src=\n      \"https://maps.googleapis.com/maps/api/js?libraries=places,geometry,drawing&key=AIzaSyDbuePk6SWPXXFDZv7Uo4YCClERESdXKiY&v=3&callback=initMap\">\n</script> -->\n\n"
 
 /***/ }),
 
@@ -254,6 +254,8 @@ var AppComponent = /** @class */ (function () {
         // console.log(this.mapStyle);
         // console.log(this.crimeRecords);
         this.geocoder = new google.maps.Geocoder();
+        // This autocomplete is for use in the search within time entry box.
+        var timeAutocomplete = new google.maps.places.Autocomplete(document.getElementById('search-within-time-text'));
         // This autocomplete is for use in the geocoder entry box.
         var zoomAutocomplete = new google.maps.places.Autocomplete(document.getElementById('zoom-to-area-text'));
         // Bias the boundaries within the map for the zoom to area text.
@@ -305,6 +307,8 @@ var AppComponent = /** @class */ (function () {
         console.log(this.mapStyle);
         console.log(this.crimeRecords);
         var geocoder = new google.maps.Geocoder();
+        // This autocomplete is for use in the search within time entry box.
+        var timeAutocomplete = new google.maps.places.Autocomplete(document.getElementById('search-within-time-text'));
         // This autocomplete is for use in the geocoder entry box.
         var zoomAutocomplete = new google.maps.places.Autocomplete(document.getElementById('zoom-to-area-text'));
         // Bias the boundaries within the map for the zoom to area text.
@@ -557,6 +561,152 @@ var AppComponent = /** @class */ (function () {
                 this.markers[i].setMap(null);
             }
         }
+    };
+    // This function allows the user to input a desired travel time, in
+    // minutes, and a travel mode, and a location - and only show the listings
+    // that are within that travel time (via that travel mode) of the location
+    AppComponent.prototype.searchWithinTime = function () {
+        var _this = this;
+        // Initialize the distance matrix service.
+        var distanceMatrixService = new google.maps.DistanceMatrixService;
+        var address = this.sidePanel.searchTimeAddress;
+        // Check to make sure the place entered isn't blank.
+        if (address === '') {
+            window.alert('You must enter an address.');
+        }
+        else {
+            this.hideMarkers(this.markers);
+            // Use the distance matrix service to calculate the duration of the
+            // routes between all our markers, and the destination address entered
+            // by the user. Then put all the origins into an origin matrix.
+            var origins = [];
+            for (var i = 0; i < this.markers.length; i++) {
+                origins[i] = this.markers[i].position;
+            }
+            var destination = address;
+            var mode = this.sidePanel.travelMode;
+            // Now that both the origins and destination are defined, get all the
+            // info for the distances between them.
+            distanceMatrixService.getDistanceMatrix({
+                origins: origins,
+                destinations: [destination],
+                travelMode: google.maps.TravelMode[mode],
+                unitSystem: google.maps.UnitSystem.IMPERIAL,
+            }, function (response, status) {
+                if (status !== google.maps.DistanceMatrixStatus.OK) {
+                    window.alert('Error was: ' + status);
+                }
+                else {
+                    _this.displayMarkersWithinTime(response);
+                }
+            });
+        }
+    };
+    // This function will go through each of the results, and,
+    // if the distance is LESS than the value in the picker, show it on the map.
+    AppComponent.prototype.displayMarkersWithinTime = function (response) {
+        var _this = this;
+        var maxDuration = this.sidePanel.maxDuration;
+        var origins = response.originAddresses;
+        var destinations = response.destinationAddresses;
+        // Parse through the results, and get the distance and duration of each.
+        // Because there might be  multiple origins and destinations we have a nested loop
+        // Then, make sure at least 1 result was found.
+        var atLeastOne = false;
+        var _loop_2 = function (i) {
+            var results = response.rows[i].elements;
+            var _loop_3 = function (j) {
+                var element = results[j];
+                if (element.status === 'OK') {
+                    // The distance is returned in feet, but the TEXT is in miles. If we wanted to switch
+                    // the function to show markers within a user-entered DISTANCE, we would need the
+                    // value for distance, but for now we only need the text.
+                    var distanceText = element.distance.text;
+                    // Duration value is given in seconds so we make it MINUTES. We need both the value
+                    // and the text.
+                    var duration = element.duration.value / 60;
+                    var durationText = element.duration.text;
+                    if (duration <= maxDuration) {
+                        // the origin [i] should = the markers[i]
+                        this_2.markers[i].setMap(this_2.map);
+                        atLeastOne = true;
+                        // Create a mini infowindow to open immediately and contain the
+                        // distance and duration
+                        var infowindow_1 = new google.maps.InfoWindow();
+                        infowindow_1.addListener('click', function () {
+                            console.log('yeah');
+                        });
+                        var infoContent = durationText + ' away, ' + distanceText +
+                            '<div><input id=\"eee' + i + '\" type=\"button\" value=\"View Route\"></input></div>';
+                        infowindow_1.setContent(infoContent);
+                        infowindow_1.open(this_2.map, this_2.markers[i]);
+                        // this.displayDirections(origins[i]);
+                        // Put this in so that this small window closes if the user clicks
+                        // the marker, when the big infowindow opens
+                        this_2.markers[i].infowindow = infowindow_1;
+                        google.maps.event.addListener(infowindow_1, 'domready', function () {
+                            // now my elements are ready for dom manipulation
+                            console.log('eee' + i + '');
+                            var clickableItem = document.getElementById('eee' + i + '');
+                            clickableItem.addEventListener('click', function () {
+                                _this.displayDirections(origins[i]);
+                            });
+                        });
+                        google.maps.event.addListener(this_2.markers[i], 'click', function () {
+                            infowindow_1.close();
+                        });
+                        // return ;
+                    }
+                }
+            };
+            for (var j = 0; j < results.length; j++) {
+                _loop_3(j);
+            }
+        };
+        var this_2 = this;
+        for (var i = 0; i < origins.length; i++) {
+            _loop_2(i);
+        }
+        if (!atLeastOne) {
+            window.alert('We could not find any locations within that distance!');
+        }
+    };
+    AppComponent.prototype.test2 = function () {
+        console.log('Just a test..');
+    };
+    // This function is in response to the user selecting "show route" on one
+    // of the markers within the calculated distance. This will display the route
+    // on the map.
+    AppComponent.prototype.displayDirections = function (origin) {
+        var _this = this;
+        console.log('showing direction');
+        this.hideMarkers(this.markers);
+        var directionsService = new google.maps.DirectionsService;
+        // Get the destination address from the user entered value.
+        var destinationAddress = this.sidePanel.searchTimeAddress;
+        // Get mode again from the user entered value.
+        var mode = this.sidePanel.travelMode;
+        directionsService.route({
+            // The origin is the passed in marker's position.
+            origin: origin,
+            // The destination is user entered address.
+            destination: destinationAddress,
+            travelMode: google.maps.TravelMode[mode]
+        }, function (response, status) {
+            if (status === google.maps.DirectionsStatus.OK) {
+                var directionsDisplay = new google.maps.DirectionsRenderer({
+                    map: _this.map,
+                    directions: response,
+                    draggable: true,
+                    polylineOptions: {
+                        strokeColor: 'green'
+                    }
+                });
+            }
+            else {
+                window.alert('Directions request failed due to ' + status);
+            }
+        });
     };
     __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["_3" /* ViewChild */])(__WEBPACK_IMPORTED_MODULE_1__side_panel_side_panel_component__["a" /* SidePanelComponent */]),
@@ -1083,7 +1233,7 @@ module.exports = "\n@import \"https://fonts.googleapis.com/css?family=Poppins:30
 /***/ "./src/app/side-panel/side-panel.component.html":
 /***/ (function(module, exports) {
 
-module.exports = "<div class=\"wrapper2\">\n        <!-- Sidebar Header -->\n        <div class=\"sidebar-header2\">\n            <br/>\n            <h4 align=\"center\">Let's Build a Safer Community</h4>\n            <!-- <h6>\n                Welcome to Tian's App!\n            </h6> -->\n        </div>\n        <br/>\n        <div>\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"show-listings\" type=\"button\" value=\"Show Listings\" (click)=\"onClickShow()\">\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"hide-listings\" type=\"button\" value=\"Hide Listings\" (click)=\"onClickHide()\">\n          <div class=\"divider1\"></div>\n        </div>\n        <div>\n          <input [(ngModel)]=\"zoomPlace\" id=\"zoom-to-area-text\" type=\"text\" placeholder=\"Enter the area you want to check.\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"zoom-to-area\" type=\"button\" value=\"Zoom\" (click)=\"onClickZoom()\">\n        </div>\n        <app-add-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-add-panel>\n        <br/>\n        <app-delete-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-delete-panel>\n        <br/>\n        <hr>\n        <div id=\"draw\">\n            <span id=\"draw\">Draw a shape to search within it    </span><br/>\n            <input class=\"btn btn-default\" id=\"toggle-drawing\"  type=\"button\" value=\"Drawing Tools\" (click)=\"OnClickDraw()\" >\n        </div>     \n        <br/>\n        <br/>\n        <hr>\n        <div>\n          <span class=\"text\"> Within </span>\n          <select id=\"max-duration\" class=\"custom-select\">\n            <option value=\"10\">10 min</option>\n            <option value=\"15\">15 min</option>\n            <option value=\"30\">30 min</option>\n            <option value=\"60\">1 hour</option>\n          </select>\n          <select id=\"mode\" class=\"custom-select\">\n            <option value=\"DRIVING\">drive</option>\n            <option value=\"WALKING\">walk</option>\n            <option value=\"BICYCLING\">bike</option>\n            <option value=\"TRANSIT\">transit ride</option>\n          </select>\n          <span class=\"text\">of</span>\n          <br/>\n          <input id=\"search-within-time-text\" type=\"text\" placeholder=\"Ex: UC Berkeley, Berkeley, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"search-within-time\" type=\"button\" value=\"Go\">\n        </div>\n        <hr>\n        <div>\n          <span class=\"text\">Search for nearby places</span>\n          <input id=\"places-search\" type=\"text\" placeholder=\"Ex: Pizza delivery in UCB\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">          \n          <input class=\"btn btn-default btn-ct\" id=\"go-places\" type=\"button\" value=\"Go\">\n        </div>\n\n</div>"
+module.exports = "<div class=\"wrapper2\">\n        <!-- Sidebar Header -->\n        <div class=\"sidebar-header2\">\n            <br/>\n            <h4 align=\"center\">Let's Build a Safer Community</h4>\n            <!-- <h6>\n                Welcome to Tian's App!\n            </h6> -->\n        </div>\n        <br/>\n        <div>\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"show-listings\" type=\"button\" value=\"Show Listings\" (click)=\"onClickShow()\">\n          <div class=\"divider2\"></div>\n          <input class=\"btn-warning btn-ct\" id=\"hide-listings\" type=\"button\" value=\"Hide Listings\" (click)=\"onClickHide()\">\n          <div class=\"divider1\"></div>\n        </div>\n        <div>\n          <input [(ngModel)]=\"zoomPlace\" id=\"zoom-to-area-text\" type=\"text\" placeholder=\"Enter the area you want to check.\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"zoom-to-area\" type=\"button\" value=\"Zoom\" (click)=\"onClickZoom()\">\n        </div>\n        <app-add-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-add-panel>\n        <br/>\n        <app-delete-panel [mapRef]='this.mapRef' [markers]='this.markers' [records]='this.records'></app-delete-panel>\n        <br/>\n        <hr>\n        <div id=\"draw\">\n            <span id=\"draw\">Draw a shape to search within it    </span><br/>\n            <input class=\"btn btn-default\" id=\"toggle-drawing\"  type=\"button\" value=\"Drawing Tools\" (click)=\"OnClickDraw()\" >\n        </div>     \n        <br/>\n        <br/>\n        <hr>\n        <div>\n          <span class=\"text\"> Within </span>\n          <select [(ngModel)]=\"maxDuration\" id=\"max-duration\" class=\"custom-select\">\n            <option value=\"10\">10 min</option>\n            <option value=\"15\">15 min</option>\n            <option value=\"30\">30 min</option>\n            <option value=\"60\">1 hour</option>\n          </select>\n          <select [(ngModel)]=\"travelMode\" id=\"mode\" class=\"custom-select\">\n            <option value=\"DRIVING\">drive</option>\n            <option value=\"WALKING\">walk</option>\n            <option value=\"BICYCLING\">bike</option>\n            <option value=\"TRANSIT\">transit ride</option>\n          </select>\n          <span class=\"text\">of</span>\n          <br/>\n          <input [(ngModel)]=\"searchTimeAddress\" id=\"search-within-time-text\" type=\"text\" placeholder=\"Ex: UC Berkeley, Berkeley, CA\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">\n          <input class=\"btn btn-default btn-ct\" id=\"search-within-time\" type=\"button\" value=\"Go\" (click)=\"seachAddressDistance()\">\n        </div>\n        <hr>\n        <div>\n          <span class=\"text\">Search for nearby places</span>\n          <input id=\"places-search\" type=\"text\" placeholder=\"Ex: Pizza delivery in UCB\" class=\"form-control\" aria-label=\"Small\" aria-describedby=\"inputGroup-sizing-sm\">          \n          <input class=\"btn btn-default btn-ct\" id=\"go-places\" type=\"button\" value=\"Go\">\n        </div>\n\n</div>"
 
 /***/ }),
 
@@ -1130,6 +1280,9 @@ var SidePanelComponent = /** @class */ (function () {
     };
     SidePanelComponent.prototype.OnClickDraw = function () {
         this.mapRef.toggleDrawing(this.mapRef.drawingManager);
+    };
+    SidePanelComponent.prototype.seachAddressDistance = function () {
+        this.mapRef.searchWithinTime();
     };
     __decorate([
         Object(__WEBPACK_IMPORTED_MODULE_0__angular_core__["z" /* Input */])('markers'),

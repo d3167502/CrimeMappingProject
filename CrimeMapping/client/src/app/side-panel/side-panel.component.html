@@ -33,13 +33,13 @@
         <hr>
         <div>
           <span class="text"> Within </span>
-          <select id="max-duration" class="custom-select">
+          <select [(ngModel)]="maxDuration" id="max-duration" class="custom-select">
             <option value="10">10 min</option>
             <option value="15">15 min</option>
             <option value="30">30 min</option>
             <option value="60">1 hour</option>
           </select>
-          <select id="mode" class="custom-select">
+          <select [(ngModel)]="travelMode" id="mode" class="custom-select">
             <option value="DRIVING">drive</option>
             <option value="WALKING">walk</option>
             <option value="BICYCLING">bike</option>
@@ -47,8 +47,8 @@
           </select>
           <span class="text">of</span>
           <br/>
-          <input id="search-within-time-text" type="text" placeholder="Ex: UC Berkeley, Berkeley, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
-          <input class="btn btn-default btn-ct" id="search-within-time" type="button" value="Go">
+          <input [(ngModel)]="searchTimeAddress" id="search-within-time-text" type="text" placeholder="Ex: UC Berkeley, Berkeley, CA" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
+          <input class="btn btn-default btn-ct" id="search-within-time" type="button" value="Go" (click)="seachAddressDistance()">
         </div>
         <hr>
         <div>

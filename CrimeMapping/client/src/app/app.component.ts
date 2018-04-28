@@ -7,6 +7,7 @@ import { DeletePanelComponent} from './delete-panel/delete-panel.component';
 import { DbAccessorService } from './db-accessor.service';
 import 'rxjs/add/operator/map';
 import {Http, Headers} from '@angular/http';
+
 declare const google: any;
 
 @Component({
@@ -81,6 +82,10 @@ export class AppComponent {
     // console.log(this.crimeRecords);
 
     this.geocoder = new google.maps.Geocoder();
+
+    // This autocomplete is for use in the search within time entry box.
+    const timeAutocomplete = new google.maps.places.Autocomplete(
+      document.getElementById('search-within-time-text'));
     // This autocomplete is for use in the geocoder entry box.
     const zoomAutocomplete = new google.maps.places.Autocomplete(
       document.getElementById('zoom-to-area-text'));
@@ -139,6 +144,10 @@ export class AppComponent {
     console.log(this.mapStyle);
     console.log(this.crimeRecords);
     const geocoder = new google.maps.Geocoder();
+
+    // This autocomplete is for use in the search within time entry box.
+    const timeAutocomplete = new google.maps.places.Autocomplete(
+      document.getElementById('search-within-time-text'));
     // This autocomplete is for use in the geocoder entry box.
     const zoomAutocomplete = new google.maps.places.Autocomplete(
       document.getElementById('zoom-to-area-text'));
@@ -409,6 +418,144 @@ export class AppComponent {
         }
       }
     }
+
+    // This function allows the user to input a desired travel time, in
+    // minutes, and a travel mode, and a location - and only show the listings
+    // that are within that travel time (via that travel mode) of the location
+    searchWithinTime() {
+      // Initialize the distance matrix service.
+      const distanceMatrixService = new google.maps.DistanceMatrixService;
+      const address = this.sidePanel.searchTimeAddress;
+      // Check to make sure the place entered isn't blank.
+      if (address === '') {
+        window.alert('You must enter an address.');
+      } else {
+        this.hideMarkers(this.markers);
+        // Use the distance matrix service to calculate the duration of the
+        // routes between all our markers, and the destination address entered
+        // by the user. Then put all the origins into an origin matrix.
+        const origins = [];
+        for (let i = 0; i < this.markers.length; i++) {
+          origins[i] = this.markers[i].position;
+        }
+        const destination = address;
+        const mode = this.sidePanel.travelMode;
+        // Now that both the origins and destination are defined, get all the
+        // info for the distances between them.
+        distanceMatrixService.getDistanceMatrix({
+          origins: origins,
+          destinations: [destination],
+          travelMode: google.maps.TravelMode[mode],
+          unitSystem: google.maps.UnitSystem.IMPERIAL,
+        }, (response, status) => {
+          if (status !== google.maps.DistanceMatrixStatus.OK) {
+            window.alert('Error was: ' + status);
+          } else {
+            this.displayMarkersWithinTime(response);
+          }
+        });
+      }
+    }
+
+    // This function will go through each of the results, and,
+    // if the distance is LESS than the value in the picker, show it on the map.
+    displayMarkersWithinTime(response) {
+      const maxDuration = this.sidePanel.maxDuration;
+      const origins = response.originAddresses;
+      const destinations = response.destinationAddresses;
+      // Parse through the results, and get the distance and duration of each.
+      // Because there might be  multiple origins and destinations we have a nested loop
+      // Then, make sure at least 1 result was found.
+      let atLeastOne = false;
+      for (let i = 0; i < origins.length; i++) {
+        const results = response.rows[i].elements;
+        for (let j = 0; j < results.length; j++) {
+          const element = results[j];
+          if (element.status === 'OK') {
+            // The distance is returned in feet, but the TEXT is in miles. If we wanted to switch
+            // the function to show markers within a user-entered DISTANCE, we would need the
+            // value for distance, but for now we only need the text.
+            const distanceText = element.distance.text;
+            // Duration value is given in seconds so we make it MINUTES. We need both the value
+            // and the text.
+            const duration = element.duration.value / 60;
+            const durationText = element.duration.text;
+            if (duration <= maxDuration) {
+              // the origin [i] should = the markers[i]
+              this.markers[i].setMap(this.map);
+              atLeastOne = true;
+              // Create a mini infowindow to open immediately and contain the
+              // distance and duration
+              const infowindow = new google.maps.InfoWindow();
+              infowindow.addListener('click', () => {
+                console.log('yeah');
+              });
+              const infoContent = durationText + ' away, ' + distanceText +
+              '<div><input id=\"eee' + i + '\" type=\"button\" value=\"View Route\"></input></div>';
+              infowindow.setContent(infoContent);
+              infowindow.open(this.map, this.markers[i]);
+              // this.displayDirections(origins[i]);
+              // Put this in so that this small window closes if the user clicks
+              // the marker, when the big infowindow opens
+
+              this.markers[i].infowindow = infowindow;
+              google.maps.event.addListener(infowindow, 'domready', () => {
+                // now my elements are ready for dom manipulation
+                const clickableItem = document.getElementById('eee' + i + '');
+                clickableItem.addEventListener('click', () => {
+                  this.displayDirections(origins[i]);
+                });
+              });
+              google.maps.event.addListener(this.markers[i], 'click', () => {
+                infowindow.close();
+              });
+              // return ;
+            }
+          }
+        }
+      }
+      if (!atLeastOne) {
+        window.alert('We could not find any locations within that distance!');
+      }
+    }
+
+    test2() {
+      console.log('Just a test..');
+    }
+    // This function is in response to the user selecting "show route" on one
+    // of the markers within the calculated distance. This will display the route
+    // on the map.
+    displayDirections(origin) {
+      console.log('showing direction');
+      this.hideMarkers(this.markers);
+      const directionsService = new google.maps.DirectionsService;
+      // Get the destination address from the user entered value.
+      const destinationAddress = this.sidePanel.searchTimeAddress;
+      // Get mode again from the user entered value.
+      const mode = this.sidePanel.travelMode;
+      directionsService.route({
+        // The origin is the passed in marker's position.
+        origin: origin,
+        // The destination is user entered address.
+        destination: destinationAddress,
+        travelMode: google.maps.TravelMode[mode]
+      }, (response, status) => {
+        if (status === google.maps.DirectionsStatus.OK) {
+          const directionsDisplay = new google.maps.DirectionsRenderer({
+            map: this.map,
+            directions: response,
+            draggable: true,
+            polylineOptions: {
+              strokeColor: 'green'
+            }
+          });
+        } else {
+          window.alert('Directions request failed due to ' + status);
+        }
+      });
+    }
+
+
 
 
 }
